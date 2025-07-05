@@ -1,0 +1,29 @@
+🚀 **PNL SUBMISSION - NEW AUTO-DETECT!** 🚀
+
+📸 **SUPER EASY:** Just upload screenshot!
+Bot asks: "Submit as PNL?" → Tap ✅ Yes
+
+🔄 **OR MANUAL:** Type `/submit` first
+
+**THEN:**
+3️⃣ Pick USD/SOL 💰
+4️⃣ Type ticker (BTC)
+5️⃣ Type investment (100)
+6️⃣ Type profit (150)
+
+✅ **Done! Clean post created**
+
+🏆 **Commands:**
+`/leaderboard` - Rankings
+`/mystats` - Your stats
+`/help` - All commands
+`/lore` - Lore.Trade platform
+`/cancel` - Stop process
+
+🆕 **NEW: One-Click Bot Launchers!**
+🖱️ **Double-click to start:**
+• `run_bot_python_terminal.bat` ⭐ Recommended
+• `bot_launcher_menu.bat` 🌟 Interactive menu
+• `run_bot_new_window.bat` 🪟 Popup window
+
+Bot: @pharaoh_pnl_bot 

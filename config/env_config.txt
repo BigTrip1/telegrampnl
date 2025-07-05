@@ -1,0 +1,36 @@
+# Telegram Bot Configuration
+BOT_TOKEN=8067030442:AAFYvuwgiF9oO6C5-S7CHM8dOH2o-htcuNA
+
+# MongoDB Configuration
+MONGODB_HOST=localhost
+MONGODB_PORT=27017
+MONGODB_DATABASE=telegram
+
+# Moderator Configuration (your user ID)
+MODERATOR_IDS=7484516287
+
+# API Configuration
+COINGECKO_API_BASE=https://api.coingecko.com/api/v3
+
+# Channel Configuration (optional - leave empty for now)
+CHANNEL_ID=
+
+# Multiple Channels Configuration (recommended for groups with multiple channels)
+# Uncomment and add your channel IDs/usernames separated by commas
+# 
+# FORMAT OPTIONS:
+# - Regular channel: @channelname OR -100channelid
+# - Specific topic: -100channelid:topicid
+#
+# EXAMPLES:
+# CHANNEL_IDS=@general,@announcements                    # Regular channels
+# CHANNEL_IDS=@general,-1001234567890:5678               # General + specific topic
+# CHANNEL_IDS=-1001234567890:5678,-1009876543210:1234   # Multiple topics
+#
+# CURRENT CONFIGURATION:
+# -1002529018762:1 = General topic (https://t.me/c/2529018762/1)
+# -1002529018762:11248 = PnLs topic (https://t.me/c/2529018762/11248)
+# -1002529018762:14346 = Trenching topic (https://t.me/c/2529018762/14346)
+#
+# Posts to 3 separate topics in the same channel
+CHANNEL_IDS=-1002529018762:1,-1002529018762:11248,-1002529018762:14346

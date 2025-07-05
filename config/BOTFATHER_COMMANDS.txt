@@ -1,0 +1,60 @@
+start - Welcome to the LORE PNL Bot! 🏆
+help - Complete command guide 🔧
+submit - Submit your trade with screenshot 📊
+cancel - Cancel any process 🚫
+pnlguide - Complete guide for PNL submissions
+leaderboard - View top traders 🏆
+monthlyleaderboard - Monthly profit leaders
+weeklyleaderboard - Weekly profit champions
+dailyleaderboard - Today's top performers
+tradeleader - Most active traders
+profitgoat - Greatest profit maker of all time
+battleleaderboard - Hall of battle champions 👑
+mystats - View your trading statistics 📈
+myhistory - Your trading history
+compare - Compare with other traders ⚖️
+roi - Best percentage returns 💎
+portfolio - Token diversification insights 📊
+monthlyreport - Monthly trading report 📊
+battlpoints - Your battle statistics 🎖️
+tokenleader - Top performing tokens
+tokenstats - Detailed token statistics
+trendingcoins - Currently trending cryptocurrencies
+marketsentiment - Community mood 💭
+popularityindex - Most traded tokens 📊
+profitability - Profitability analysis 📊
+timetrendz - Best trading times 🎯
+bigballer - Whale tracker 🐋
+percentking - Biggest gains 👑
+consistenttrader - Most reliable traders 🎯
+lossleader - Transparency board 📉
+smallcap - Under $100 investments 💸
+midcap - $100-$1000 investments 🎲
+largecap - Over $1000 investments 🏦
+topgainer - Best performers by time 📊
+achievements - View trading achievements 🏅
+streaks - Winning and losing streaks
+milestones - Trading milestones reached
+randomtrade - Random trade from database
+todaysbiggest - Today's biggest winner 🎲
+hall_of_fame - All-time legends 🏛️
+profitbattle - Start profit battles 💰
+tradewar - Start trade count battles ⚡
+battlerules - Complete battle system guide ⚔️
+search - Find trades by token 🔍
+finduser - User's trading history 👤
+export - Export data (moderators only) 📤
+filters - Set custom leaderboard filters 🔍
+pnlreport - Comprehensive PNL analysis
+lore - Open Lore.trade platform 🌐
+loretotalprofit - Community total profit 🌟
+analysis - Advanced trading analysis 🧠
+insights - Market insights and trends 📈
+sentiment - Weekly sentiment analysis 💭
+tokenanalysis - Token performance analysis 🎯
+topprofits - Highest profit trades 💎
+topperformers - Top performing traders 🏆
+weeklyreport - Weekly trading report 📅
+monthlyboard - Monthly leaderboard 📊
+fullboard - Complete leaderboard 📋
+weeklyboard - Weekly leaderboard 📅 

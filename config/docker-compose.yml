@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  telegram-bot:
+    build: .
+    container_name: telegram-pnl-bot
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - MONGODB_HOST=mongodb
+      - MONGODB_PORT=27017
+      - MONGODB_DATABASE=telegram
+      - MODERATOR_IDS=${MODERATOR_IDS}
+      - CHANNEL_IDS=${CHANNEL_IDS}
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7
+    container_name: telegram-bot-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:

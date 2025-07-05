@@ -1,0 +1,62 @@
+📱 **HOW TO SUBMIT YOUR PNL - SUPER EASY!** 📱
+
+🚀 **NEW: JUST UPLOAD A SCREENSHOT!**
+
+🎯 **AUTO-DETECTION METHOD (EASIEST):**
+1️⃣ Upload screenshot 📸
+2️⃣ Bot asks: "Submit as PNL?" 
+3️⃣ Tap ✅ Yes or ❌ No
+4️⃣ If Yes: Continue with steps below!
+
+🔄 **MANUAL METHOD:**
+1️⃣ Type `/submit`
+2️⃣ Upload your trade screenshot 📸
+
+📝 **BOTH METHODS CONTINUE:**
+3️⃣ Pick currency: **💵 USD** or **◎ SOL**
+4️⃣ Type ticker: `BTC` `ETH` `DOGE` etc.
+5️⃣ Type investment: `100` (what you put in)
+6️⃣ Type profit: `150` (what you made)
+
+✅ **BOOM! Clean post created automatically!**
+
+📝 **EXAMPLE - AUTO-DETECTION:**
+1. Upload DOGE trade screenshot 📸
+2. Bot: "Submit as PNL?" → Tap ✅ Yes
+3. Tap "💵 USD"
+4. Type: `DOGE`
+5. Type: `500`
+6. Type: `750`
+
+**RESULT:**
+```
+🟢 PNL Submission 🟢
+
+👤 Trader: YourName
+🎯 Ticker: DOGE  
+💵 Investment: $500.00
+💰 Profit: $750.00 | 3.57 SOL
+📊 Return: +150.00%
+```
+
+⚡ **QUICK TIPS:**
+✅ Use clear screenshots
+✅ Be honest about trades  
+✅ Use negative numbers for losses (-100)
+❌ No fake screenshots
+❌ Don't submit same trade twice
+
+🆘 **HELP:**
+• Type `/cancel` to stop anytime
+• Type `/help` for all commands
+• Wait 10 seconds if bot is slow
+
+🏆 **WHY SUBMIT?**
+🥇 Climb leaderboards
+📊 Track your progress  
+🎮 Unlock achievements
+👥 Compare with others
+
+**Ready to flex your trades? Type `/submit` now!** 🚀
+
+Bot: @pharaoh_pnl_bot 
