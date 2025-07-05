@@ -118,6 +118,11 @@ dmypy.json
 mongodb_export/
 # database_backup/ - Allow for migration (contains 190 PNL records)
 
+# Database synchronization system
+database_sync/              # Local sync operations (not tracked)
+database_backup/*.json      # All JSON exports in backup folder
+!database_backup/latest_sync.json  # Except the latest sync file for git sharing
+
 # Logs
 *.log
 logs/
