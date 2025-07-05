@@ -1487,7 +1487,7 @@ Ready to track your trading journey? Start with a screenshot! 📸
             
             if not total_data:
                 await self.safe_reply(update, "📊 No trading data available yet.")
-        await self.clean_command_message(update, context)
+                await self.clean_command_message(update, context)
                 return
             
             # Extract data
@@ -1534,6 +1534,9 @@ Ready to track your trading journey? Start with a screenshot! 📸
 🔴 **Losing Trades:** {losing_trades:,}
 
 📅 **Updated:** {message_formatter.format_date_uk_with_time(datetime.now(timezone.utc))}
+
+⚠️ **IMPORTANT DISCLAIMER:**
+This data represents **ONLY** profits that have been voluntarily submitted by users in the Telegram PNL channel. This is **NOT** reflective of total profit made by using LORE. Real estimates of total community profits are estimated to be around **$165,000** or higher.
 
 💡 **Note:** The "Historical Value" shows your actual profit based on SOL prices when each trade was made. The "Current Value" shows what those same SOL amounts would be worth at today's rate. The difference reflects SOL price movement over time.
 
