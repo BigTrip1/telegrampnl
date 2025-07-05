@@ -5,6 +5,7 @@ Database configuration and operations for the Telegram PNL Bot
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
+import re
 
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
@@ -23,6 +24,8 @@ class DatabaseManager:
         self.client = None
         self.db = None
         self.pnls_collection = None
+        self.battles_collection = None
+        self.battle_points_collection = None
         
     def connect(self) -> bool:
         """Establish connection to MongoDB"""
@@ -32,6 +35,8 @@ class DatabaseManager:
             self.client.admin.command('ping')
             self.db = self.client[self.database_name]
             self.pnls_collection = self.db['pnls']
+            self.battles_collection = self.db['battles']
+            self.battle_points_collection = self.db['battle_points']
             logger.info(f"Successfully connected to MongoDB at {self.host}:{self.port}")
             return True
         except ConnectionFailure as e:
@@ -40,6 +45,44 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Unexpected error connecting to MongoDB: {e}")
             return False
+    
+    def create_username_match_conditions(self, user_id=None, username=None):
+        """Create comprehensive username matching conditions for database queries"""
+        conditions = []
+        
+        # Add user_id matches if provided
+        if user_id:
+            conditions.extend([
+                {'user_id': str(user_id)},
+                {'user_id': user_id}  # Handle both string and int user_id
+            ])
+        
+        # Add username matches if provided
+        if username:
+            # Clean username (remove @ if present)
+            clean_username = username.replace('@', '') if username.startswith('@') else username
+            
+            # Add all possible username variations
+            conditions.extend([
+                {'username': username},                    # Exact match
+                {'username': f'@{clean_username}'},        # With @ prefix
+                {'username': clean_username},              # Without @ prefix
+                {'username': {'$regex': f'^@?{re.escape(clean_username)}$', '$options': 'i'}}  # Case insensitive regex
+            ])
+        
+        return conditions
+    
+    def create_username_match_query(self, user_id=None, username=None):
+        """Create a MongoDB query for username matching"""
+        conditions = self.create_username_match_conditions(user_id, username)
+        
+        if not conditions:
+            return {}
+        
+        if len(conditions) == 1:
+            return conditions[0]
+        
+        return {'$or': conditions}
     
     def insert_pnl_record(self, record: Dict[str, Any]) -> bool:
         """Insert a PNL record into the database"""
@@ -56,16 +99,57 @@ class DatabaseManager:
             return False
     
     def get_all_time_leaderboard(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get all-time leaderboard by total profit in USD"""
+        """Get all-time leaderboard with enhanced username matching to prevent fragmentation"""
         try:
             pipeline = [
                 {
+                    '$addFields': {
+                        'normalized_username': {
+                            '$toLower': {
+                                '$cond': [
+                                    {'$eq': [{'$substr': ['$username', 0, 1]}, '@']},
+                                    {'$substr': ['$username', 1, -1]},  # Remove @ symbol
+                                    '$username'  # Keep as is
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
                     '$group': {
-                        '_id': '$username',  # Group by username instead of user_id
-                        'username': {'$first': '$username'},
+                        '_id': '$normalized_username',
+                        'username': {'$first': '$username'},  # Keep original username for display
                         'total_profit_usd': {'$sum': '$profit_usd'},
                         'total_profit_sol': {'$sum': '$profit_sol'},
-                        'trade_count': {'$sum': 1}
+                        'trade_count': {'$sum': 1},
+                        'winning_trades': {
+                            '$sum': {
+                                '$cond': [{'$gt': ['$profit_usd', 0]}, 1, 0]
+                            }
+                        },
+                        'total_investment': {'$sum': '$initial_investment'}
+                    }
+                },
+                {
+                    '$addFields': {
+                        'win_rate': {
+                            '$multiply': [
+                                {'$divide': ['$winning_trades', '$trade_count']},
+                                100
+                            ]
+                        },
+                        'roi': {
+                            '$cond': [
+                                {'$gt': ['$total_investment', 0]},
+                                {
+                                    '$multiply': [
+                                        {'$divide': ['$total_profit_usd', '$total_investment']},
+                                        100
+                                    ]
+                                },
+                                0
+                            ]
+                        }
                     }
                 },
                 {'$sort': {'total_profit_usd': -1}},
@@ -77,7 +161,7 @@ class DatabaseManager:
             return []
     
     def get_monthly_leaderboard(self, year: int, month: int, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get monthly leaderboard for specified year and month"""
+        """Get monthly leaderboard for specified year and month with enhanced username matching"""
         try:
             # Create date range for the month
             start_date = datetime(year, month, 1, tzinfo=timezone.utc)
@@ -93,12 +177,53 @@ class DatabaseManager:
                     }
                 },
                 {
+                    '$addFields': {
+                        'normalized_username': {
+                            '$toLower': {
+                                '$cond': [
+                                    {'$eq': [{'$substr': ['$username', 0, 1]}, '@']},
+                                    {'$substr': ['$username', 1, -1]},  # Remove @ symbol
+                                    '$username'  # Keep as is
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
                     '$group': {
-                        '_id': '$username',  # Group by username instead of user_id
-                        'username': {'$first': '$username'},
+                        '_id': '$normalized_username',
+                        'username': {'$first': '$username'},  # Keep original username for display
                         'total_profit_usd': {'$sum': '$profit_usd'},
                         'total_profit_sol': {'$sum': '$profit_sol'},
-                        'trade_count': {'$sum': 1}
+                        'trade_count': {'$sum': 1},
+                        'winning_trades': {
+                            '$sum': {
+                                '$cond': [{'$gt': ['$profit_usd', 0]}, 1, 0]
+                            }
+                        },
+                        'total_investment': {'$sum': '$initial_investment'}
+                    }
+                },
+                {
+                    '$addFields': {
+                        'win_rate': {
+                            '$multiply': [
+                                {'$divide': ['$winning_trades', '$trade_count']},
+                                100
+                            ]
+                        },
+                        'roi': {
+                            '$cond': [
+                                {'$gt': ['$total_investment', 0]},
+                                {
+                                    '$multiply': [
+                                        {'$divide': ['$total_profit_usd', '$total_investment']},
+                                        100
+                                    ]
+                                },
+                                0
+                            ]
+                        }
                     }
                 },
                 {'$sort': {'total_profit_usd': -1}},
@@ -110,7 +235,7 @@ class DatabaseManager:
             return []
     
     def get_weekly_leaderboard(self, start_date: datetime, end_date: datetime, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get weekly leaderboard for specified date range"""
+        """Get weekly leaderboard for specified date range with enhanced username matching"""
         try:
             pipeline = [
                 {
@@ -119,12 +244,53 @@ class DatabaseManager:
                     }
                 },
                 {
+                    '$addFields': {
+                        'normalized_username': {
+                            '$toLower': {
+                                '$cond': [
+                                    {'$eq': [{'$substr': ['$username', 0, 1]}, '@']},
+                                    {'$substr': ['$username', 1, -1]},  # Remove @ symbol
+                                    '$username'  # Keep as is
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
                     '$group': {
-                        '_id': '$username',  # Group by username instead of user_id
-                        'username': {'$first': '$username'},
+                        '_id': '$normalized_username',
+                        'username': {'$first': '$username'},  # Keep original username for display
                         'total_profit_usd': {'$sum': '$profit_usd'},
                         'total_profit_sol': {'$sum': '$profit_sol'},
-                        'trade_count': {'$sum': 1}
+                        'trade_count': {'$sum': 1},
+                        'winning_trades': {
+                            '$sum': {
+                                '$cond': [{'$gt': ['$profit_usd', 0]}, 1, 0]
+                            }
+                        },
+                        'total_investment': {'$sum': '$initial_investment'}
+                    }
+                },
+                {
+                    '$addFields': {
+                        'win_rate': {
+                            '$multiply': [
+                                {'$divide': ['$winning_trades', '$trade_count']},
+                                100
+                            ]
+                        },
+                        'roi': {
+                            '$cond': [
+                                {'$gt': ['$total_investment', 0]},
+                                {
+                                    '$multiply': [
+                                        {'$divide': ['$total_profit_usd', '$total_investment']},
+                                        100
+                                    ]
+                                },
+                                0
+                            ]
+                        }
                     }
                 },
                 {'$sort': {'total_profit_usd': -1}},
@@ -136,7 +302,7 @@ class DatabaseManager:
             return []
     
     def get_daily_leaderboard(self, date: datetime, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get daily leaderboard for specified date"""
+        """Get daily leaderboard for specified date with enhanced username matching"""
         try:
             start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
             end_date = start_date.replace(hour=23, minute=59, second=59, microsecond=999999)
@@ -148,12 +314,53 @@ class DatabaseManager:
                     }
                 },
                 {
+                    '$addFields': {
+                        'normalized_username': {
+                            '$toLower': {
+                                '$cond': [
+                                    {'$eq': [{'$substr': ['$username', 0, 1]}, '@']},
+                                    {'$substr': ['$username', 1, -1]},  # Remove @ symbol
+                                    '$username'  # Keep as is
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
                     '$group': {
-                        '_id': '$username',  # Group by username instead of user_id
-                        'username': {'$first': '$username'},
+                        '_id': '$normalized_username',
+                        'username': {'$first': '$username'},  # Keep original username for display
                         'total_profit_usd': {'$sum': '$profit_usd'},
                         'total_profit_sol': {'$sum': '$profit_sol'},
-                        'trade_count': {'$sum': 1}
+                        'trade_count': {'$sum': 1},
+                        'winning_trades': {
+                            '$sum': {
+                                '$cond': [{'$gt': ['$profit_usd', 0]}, 1, 0]
+                            }
+                        },
+                        'total_investment': {'$sum': '$initial_investment'}
+                    }
+                },
+                {
+                    '$addFields': {
+                        'win_rate': {
+                            '$multiply': [
+                                {'$divide': ['$winning_trades', '$trade_count']},
+                                100
+                            ]
+                        },
+                        'roi': {
+                            '$cond': [
+                                {'$gt': ['$total_investment', 0]},
+                                {
+                                    '$multiply': [
+                                        {'$divide': ['$total_profit_usd', '$total_investment']},
+                                        100
+                                    ]
+                                },
+                                0
+                            ]
+                        }
                     }
                 },
                 {'$sort': {'total_profit_usd': -1}},
@@ -165,7 +372,7 @@ class DatabaseManager:
             return []
     
     def get_trade_count_leaderboard(self, start_date: datetime, end_date: datetime, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get leaderboard by trade count for specified date range"""
+        """Get leaderboard by trade count for specified date range with enhanced username matching"""
         try:
             pipeline = [
                 {
@@ -174,12 +381,54 @@ class DatabaseManager:
                     }
                 },
                 {
+                    '$addFields': {
+                        'normalized_username': {
+                            '$toLower': {
+                                '$cond': [
+                                    {'$eq': [{'$substr': ['$username', 0, 1]}, '@']},
+                                    {'$substr': ['$username', 1, -1]},  # Remove @ symbol
+                                    '$username'  # Keep as is
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
                     '$group': {
-                        '_id': '$username',  # Group by username instead of user_id
-                        'username': {'$first': '$username'},
+                        '_id': '$normalized_username',
+                        'username': {'$first': '$username'},  # Keep original username for display
                         'trade_count': {'$sum': 1},
                         'total_profit_usd': {'$sum': '$profit_usd'},
-                        'total_profit_sol': {'$sum': '$profit_sol'}
+                        'total_profit_sol': {'$sum': '$profit_sol'},
+                        'winning_trades': {
+                            '$sum': {
+                                '$cond': [{'$gt': ['$profit_usd', 0]}, 1, 0]
+                            }
+                        },
+                        'total_investment': {'$sum': '$initial_investment'},
+                        'avg_profit_per_trade': {'$avg': '$profit_usd'}
+                    }
+                },
+                {
+                    '$addFields': {
+                        'win_rate': {
+                            '$multiply': [
+                                {'$divide': ['$winning_trades', '$trade_count']},
+                                100
+                            ]
+                        },
+                        'roi': {
+                            '$cond': [
+                                {'$gt': ['$total_investment', 0]},
+                                {
+                                    '$multiply': [
+                                        {'$divide': ['$total_profit_usd', '$total_investment']},
+                                        100
+                                    ]
+                                },
+                                0
+                            ]
+                        }
                     }
                 },
                 {'$sort': {'trade_count': -1}},
@@ -273,15 +522,18 @@ class DatabaseManager:
     # ===== NEW METHODS FOR ENHANCED FEATURES =====
     
     def get_user_stats(self, user_id: str, username: str) -> Optional[Dict[str, Any]]:
-        """Get comprehensive user statistics"""
+        """Get comprehensive user statistics with improved user matching"""
         try:
+            # Enhanced user matching - handle different username formats and ensure proper matching
+            user_match_conditions = self.create_username_match_conditions(user_id, username)
+            
+            if not user_match_conditions:
+                return None
+                
             pipeline = [
                 {
                     '$match': {
-                        '$or': [
-                            {'user_id': user_id},
-                            {'username': username}
-                        ]
+                        '$or': user_match_conditions
                     }
                 },
                 {
@@ -290,7 +542,7 @@ class DatabaseManager:
                         'total_trades': {'$sum': 1},
                         'total_profit_usd': {'$sum': '$profit_usd'},
                         'total_profit_sol': {'$sum': '$profit_sol'},
-                        'total_investment': {'$sum': '$initial_investment'},
+                        'total_investment_usd': {'$sum': '$investment_usd'},
                         'winning_trades': {
                             '$sum': {
                                 '$cond': [{'$gt': ['$profit_usd', 0]}, 1, 0]
@@ -311,9 +563,18 @@ class DatabaseManager:
             result = list(self.pnls_collection.aggregate(pipeline))
             if result:
                 stats = result[0]
+                # Calculate win rate
                 stats['win_rate'] = (stats['winning_trades'] / stats['total_trades']) * 100 if stats['total_trades'] > 0 else 0
-                stats['roi'] = (stats['total_profit_usd'] / stats['total_investment']) * 100 if stats['total_investment'] > 0 else 0
+                # Calculate ROI with better validation using USD investment amounts
+                if stats['total_investment_usd'] > 0:
+                    stats['roi'] = (stats['total_profit_usd'] / stats['total_investment_usd']) * 100
+                else:
+                    stats['roi'] = 0
                 stats['token_count'] = len(stats['unique_tokens'])
+                
+                # Debug logging to help identify issues
+                logger.info(f"User stats for {username} (ID: {user_id}): {stats['total_trades']} trades, ${stats['total_profit_usd']:.2f} profit, {stats['roi']:.2f}% ROI")
+                
                 return stats
             return None
         except Exception as e:
@@ -323,11 +584,10 @@ class DatabaseManager:
     def get_user_stats_by_username(self, username: str) -> Optional[Dict[str, Any]]:
         """Get user stats by username only"""
         try:
+            match_query = self.create_username_match_query(username=username)
             pipeline = [
                 {
-                    '$match': {
-                        'username': {'$regex': f'^@?{username}$', '$options': 'i'}
-                    }
+                    '$match': match_query
                 },
                 {
                     '$group': {
@@ -335,7 +595,7 @@ class DatabaseManager:
                         'total_trades': {'$sum': 1},
                         'total_profit_usd': {'$sum': '$profit_usd'},
                         'total_profit_sol': {'$sum': '$profit_sol'},
-                        'total_investment': {'$sum': '$initial_investment'},
+                        'total_investment_usd': {'$sum': '$investment_usd'},
                         'winning_trades': {
                             '$sum': {
                                 '$cond': [{'$gt': ['$profit_usd', 0]}, 1, 0]
@@ -357,7 +617,7 @@ class DatabaseManager:
             if result:
                 stats = result[0]
                 stats['win_rate'] = (stats['winning_trades'] / stats['total_trades']) * 100 if stats['total_trades'] > 0 else 0
-                stats['roi'] = (stats['total_profit_usd'] / stats['total_investment']) * 100 if stats['total_investment'] > 0 else 0
+                stats['roi'] = (stats['total_profit_usd'] / stats['total_investment_usd']) * 100 if stats['total_investment_usd'] > 0 else 0
                 stats['token_count'] = len(stats['unique_tokens'])
                 return stats
             return None
@@ -368,13 +628,9 @@ class DatabaseManager:
     def get_user_history(self, user_id: str, username: str, limit: int = 20) -> List[Dict[str, Any]]:
         """Get user's trading history"""
         try:
+            match_query = self.create_username_match_query(user_id, username)
             return list(self.pnls_collection.find(
-                {
-                    '$or': [
-                        {'user_id': user_id},
-                        {'username': username}
-                    ]
-                },
+                match_query,
                 {'_id': 0}
             ).sort('timestamp', -1).limit(limit))
         except Exception as e:
@@ -382,13 +638,26 @@ class DatabaseManager:
             return []
     
     def get_roi_leaderboard(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get ROI-based leaderboard"""
+        """Get ROI-based leaderboard with enhanced username matching"""
         try:
             pipeline = [
                 {
+                    '$addFields': {
+                        'normalized_username': {
+                            '$toLower': {
+                                '$cond': [
+                                    {'$eq': [{'$substr': ['$username', 0, 1]}, '@']},
+                                    {'$substr': ['$username', 1, -1]},  # Remove @ symbol
+                                    '$username'  # Keep as is
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
                     '$group': {
-                        '_id': '$username',  # Group by username instead of user_id
-                        'username': {'$first': '$username'},
+                        '_id': '$normalized_username',
+                        'username': {'$first': '$username'},  # Keep original username for display
                         'total_profit_usd': {'$sum': '$profit_usd'},
                         'total_investment': {'$sum': '$initial_investment'},
                         'trade_count': {'$sum': 1}
@@ -520,16 +789,29 @@ class DatabaseManager:
             return []
     
     def get_whale_leaderboard(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get highest investment amounts leaderboard"""
+        """Get highest investment amounts leaderboard with enhanced username matching"""
         try:
             pipeline = [
                 {
+                    '$addFields': {
+                        'normalized_username': {
+                            '$toLower': {
+                                '$cond': [
+                                    {'$eq': [{'$substr': ['$username', 0, 1]}, '@']},
+                                    {'$substr': ['$username', 1, -1]},  # Remove @ symbol
+                                    '$username'  # Keep as is
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
                     '$group': {
-                        '_id': '$username',  # Group by username instead of user_id
-                        'username': {'$first': '$username'},
+                        '_id': '$normalized_username',
+                        'username': {'$first': '$username'},  # Keep original username for display
                         'max_investment': {'$max': '$initial_investment'},
                         'total_investment': {'$sum': '$initial_investment'},
-                        'avg_investment': {'$avg': '$initial_investment'},
+                        'total_profit_usd': {'$sum': '$profit_usd'},
                         'trade_count': {'$sum': 1}
                     }
                 },
@@ -542,25 +824,50 @@ class DatabaseManager:
             return []
     
     def get_percent_gain_leaderboard(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get best percentage gains leaderboard"""
+        """Get best percentage gains leaderboard with enhanced username matching"""
         try:
             pipeline = [
                 {
-                    '$match': {
-                        'initial_investment': {'$gt': 0}
-                    }
-                },
-                {
                     '$addFields': {
+                        'normalized_username': {
+                            '$toLower': {
+                                '$cond': [
+                                    {'$eq': [{'$substr': ['$username', 0, 1]}, '@']},
+                                    {'$substr': ['$username', 1, -1]},  # Remove @ symbol
+                                    '$username'  # Keep as is
+                                ]
+                            }
+                        },
                         'percent_gain': {
-                            '$multiply': [
-                                {'$divide': ['$profit_usd', '$initial_investment']},
-                                100
+                            '$cond': [
+                                {'$gt': ['$initial_investment', 0]},
+                                {
+                                    '$multiply': [
+                                        {'$divide': ['$profit_usd', '$initial_investment']},
+                                        100
+                                    ]
+                                },
+                                0
                             ]
                         }
                     }
                 },
-                {'$sort': {'percent_gain': -1}},
+                {
+                    '$match': {
+                        'initial_investment': {'$gt': 0},
+                        'profit_usd': {'$gt': 0}
+                    }
+                },
+                {
+                    '$group': {
+                        '_id': '$normalized_username',
+                        'username': {'$first': '$username'},  # Keep original username for display
+                        'best_percent_gain': {'$max': '$percent_gain'},
+                        'total_profit_usd': {'$sum': '$profit_usd'},
+                        'trade_count': {'$sum': 1}
+                    }
+                },
+                {'$sort': {'best_percent_gain': -1}},
                 {'$limit': limit}
             ]
             return list(self.pnls_collection.aggregate(pipeline))
@@ -645,8 +952,9 @@ class DatabaseManager:
     def search_trades_by_username(self, username: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Search trades by username"""
         try:
+            match_query = self.create_username_match_query(username=username)
             return list(self.pnls_collection.find(
-                {'username': {'$regex': f'^@?{username}$', '$options': 'i'}},
+                match_query,
                 {'_id': 0}
             ).sort('timestamp', -1).limit(limit))
         except Exception as e:
@@ -815,14 +1123,8 @@ class DatabaseManager:
         """Get user winning/losing streaks"""
         try:
             # Get user's trades in chronological order
-            trades = list(self.pnls_collection.find(
-                {
-                    '$or': [
-                        {'user_id': user_id},
-                        {'username': username}
-                    ]
-                }
-            ).sort('timestamp', 1))
+            match_query = self.create_username_match_query(user_id, username)
+            trades = list(self.pnls_collection.find(match_query).sort('timestamp', 1))
             
             if not trades:
                 return {
@@ -932,54 +1234,175 @@ class DatabaseManager:
             }
     
     def get_hall_of_fame(self) -> List[Dict[str, Any]]:
-        """Get hall of fame legends - top performers across categories"""
+        """Get hall of fame legends - top performers across multiple categories"""
         try:
             legends = []
             
-            # Profit King/Queen
-            profit_king = self.get_profit_goat()
-            if profit_king:
+            # 1. PROFIT EMPEROR - Highest total profit
+            profit_emperor = self.get_profit_goat()
+            if profit_emperor:
                 legends.append({
-                    'title': '👑 Profit Royalty',
-                    'username': profit_king['username'],
-                    'achievement': f"${profit_king['total_profit_usd']:,.2f} total profit",
-                    'category': 'profit'
+                    'category': '👑 PROFIT EMPEROR',
+                    'username': profit_emperor['username'],
+                    'achievement': f"${profit_emperor['total_profit_usd']:,.0f}",
+                    'subtitle': f"{profit_emperor.get('trade_count', 0)} trades",
+                    'description': "Ruler of the profit realm",
+                    'icon': '💰',
+                    'rank': 1
                 })
             
-            # ROI Master
+            # 2. ROI DEITY - Best percentage returns
             roi_leaders = self.get_roi_leaderboard(1)
             if roi_leaders:
-                roi_king = roi_leaders[0]
+                roi_deity = roi_leaders[0]
                 legends.append({
-                    'title': '🎯 ROI Master',
-                    'username': roi_king['username'],
-                    'achievement': f"{roi_king['roi_percentage']:.1f}% average ROI",
-                    'category': 'roi'
+                    'category': '🚀 ROI DEITY',
+                    'username': roi_deity['username'],
+                    'achievement': f"{roi_deity.get('roi_percentage', 0):.1f}%",
+                    'subtitle': f"${roi_deity.get('total_profit_usd', 0):,.0f} profit",
+                    'description': "Master of percentage perfection",
+                    'icon': '📈',
+                    'rank': 2
                 })
             
-            # Volume Leader
-            whale_leaders = self.get_whale_leaderboard(1)
-            if whale_leaders:
-                whale_king = whale_leaders[0]
+            # 3. VOLUME TITAN - Highest total investment
+            volume_leaders = self.get_whale_leaderboard(1)
+            if volume_leaders:
+                volume_titan = volume_leaders[0]
                 legends.append({
-                    'title': '🐋 Volume King',
-                    'username': whale_king['username'],
-                    'achievement': f"${whale_king['total_investment']:,.2f} total invested",
-                    'category': 'volume'
+                    'category': '🐋 VOLUME TITAN',
+                    'username': volume_titan['username'],
+                    'achievement': f"${volume_titan.get('total_investment', 0):,.0f}",
+                    'subtitle': f"{volume_titan.get('trade_count', 0)} trades",
+                    'description': "Commander of capital deployment",
+                    'icon': '💎',
+                    'rank': 3
                 })
             
-            # Consistency Champion
-            consistent_leaders = self.get_consistency_leaderboard(1)
-            if consistent_leaders:
-                consistent_king = consistent_leaders[0]
-                legends.append({
-                    'title': '🎖️ Consistency Champion',
-                    'username': consistent_king['username'],
-                    'achievement': f"{consistent_king['win_rate']:.1f}% win rate ({consistent_king['trade_count']} trades)",
-                    'category': 'consistency'
-                })
+            # 4. TRADE GLADIATOR - Most total trades
+            try:
+                trade_pipeline = [
+                    {'$group': {
+                        '_id': '$normalized_username',
+                        'username': {'$first': '$username'},
+                        'total_trades': {'$sum': 1},
+                        'total_profit_usd': {'$sum': '$profit_usd'},
+                        'win_rate': {
+                            '$avg': {
+                                '$cond': [{'$gt': ['$profit_usd', 0]}, 100, 0]
+                            }
+                        }
+                    }},
+                    {'$sort': {'total_trades': -1}},
+                    {'$limit': 1}
+                ]
+                trade_result = list(self.pnls_collection.aggregate(trade_pipeline))
+                if trade_result:
+                    trade_gladiator = trade_result[0]
+                    legends.append({
+                        'category': '⚔️ TRADE GLADIATOR',
+                        'username': trade_gladiator['username'],
+                        'achievement': f"{trade_gladiator['total_trades']:,} trades",
+                        'subtitle': f"${trade_gladiator.get('total_profit_usd', 0):,.0f} profit",
+                        'description': "Warrior of trading volume",
+                        'icon': '⚡',
+                        'rank': 4
+                    })
+            except Exception as e:
+                logger.warning(f"Could not get trade gladiator: {e}")
+            
+            # 5. PRECISION MASTER - Highest win rate (min 10 trades)
+            try:
+                precision_pipeline = [
+                    {'$addFields': {
+                        'normalized_username': {
+                            '$toLower': {
+                                '$cond': [
+                                    {'$eq': [{'$substr': ['$username', 0, 1]}, '@']},
+                                    {'$substr': ['$username', 1, -1]},
+                                    '$username'
+                                ]
+                            }
+                        }
+                    }},
+                    {'$group': {
+                        '_id': '$normalized_username',
+                        'username': {'$first': '$username'},
+                        'total_trades': {'$sum': 1},
+                        'winning_trades': {
+                            '$sum': {'$cond': [{'$gt': ['$profit_usd', 0]}, 1, 0]}
+                        },
+                        'total_profit_usd': {'$sum': '$profit_usd'}
+                    }},
+                    {'$match': {'total_trades': {'$gte': 10}}},
+                    {'$addFields': {
+                        'win_rate': {
+                            '$multiply': [
+                                {'$divide': ['$winning_trades', '$total_trades']},
+                                100
+                            ]
+                        }
+                    }},
+                    {'$sort': {'win_rate': -1}},
+                    {'$limit': 1}
+                ]
+                precision_result = list(self.pnls_collection.aggregate(precision_pipeline))
+                if precision_result:
+                    precision_master = precision_result[0]
+                    legends.append({
+                        'category': '🎯 PRECISION MASTER',
+                        'username': precision_master['username'],
+                        'achievement': f"{precision_master['win_rate']:.1f}%",
+                        'subtitle': f"{precision_master['total_trades']} trades",
+                        'description': "Archer of accuracy",
+                        'icon': '🏹',
+                        'rank': 5
+                    })
+            except Exception as e:
+                logger.warning(f"Could not get precision master: {e}")
+            
+            # 6. BATTLE EMPEROR - Most battle points
+            try:
+                battle_leaders = self.get_battle_leaderboard(1)
+                if battle_leaders:
+                    battle_emperor = battle_leaders[0]
+                    total_points = battle_emperor.get('profit_battle_points', 0) + battle_emperor.get('trade_war_points', 0)
+                    battles_won = battle_emperor.get('battles_won', 0)
+                    legends.append({
+                        'category': '🏛️ BATTLE EMPEROR',
+                        'username': battle_emperor['username'],
+                        'achievement': f"{total_points} pts",
+                        'subtitle': f"{battles_won} victories",
+                        'description': "Conqueror of the colosseum",
+                        'icon': '⚔️',
+                        'rank': 6
+                    })
+            except Exception as e:
+                logger.warning(f"Could not get battle emperor: {e}")
+            
+            # 7. SINGLE TRADE LEGEND - Biggest single trade profit
+            try:
+                single_trade_pipeline = [
+                    {'$sort': {'profit_usd': -1}},
+                    {'$limit': 1}
+                ]
+                single_trade_result = list(self.pnls_collection.aggregate(single_trade_pipeline))
+                if single_trade_result:
+                    single_legend = single_trade_result[0]
+                    legends.append({
+                        'category': '💥 SINGLE TRADE LEGEND',
+                        'username': single_legend['username'],
+                        'achievement': f"${single_legend['profit_usd']:,.0f}",
+                        'subtitle': f"{single_legend.get('ticker', 'Unknown')} trade",
+                        'description': "One trade to rule them all",
+                        'icon': '🌟',
+                        'rank': 7
+                    })
+            except Exception as e:
+                logger.warning(f"Could not get single trade legend: {e}")
             
             return legends
+            
         except Exception as e:
             logger.error(f"Error getting hall of fame: {e}")
             return []
@@ -1238,13 +1661,9 @@ class DatabaseManager:
     def get_user_export_data(self, user_id: str, username: str) -> List[Dict[str, Any]]:
         """Get user's personal data for export"""
         try:
+            match_query = self.create_username_match_query(user_id, username)
             return list(self.pnls_collection.find(
-                {
-                    '$or': [
-                        {'user_id': user_id},
-                        {'username': username}
-                    ]
-                },
+                match_query,
                 {'_id': 0}
             ).sort('timestamp', -1))
         except Exception as e:
@@ -1254,14 +1673,10 @@ class DatabaseManager:
     def get_user_portfolio(self, user_id: str, username: str) -> Optional[Dict[str, Any]]:
         """Get user's token diversification"""
         try:
+            match_query = self.create_username_match_query(user_id, username)
             pipeline = [
                 {
-                    '$match': {
-                        '$or': [
-                            {'user_id': user_id},
-                            {'username': username}
-                        ]
-                    }
+                    '$match': match_query
                 },
                 {
                     '$group': {
@@ -1300,16 +1715,12 @@ class DatabaseManager:
             end_date = start_date + timedelta(days=32)
             end_date = end_date.replace(day=1) - timedelta(days=1)  # Last day of month
             
+            user_match_query = self.create_username_match_query(user_id, username)
             pipeline = [
                 {
                     '$match': {
                         '$and': [
-                            {
-                                '$or': [
-                                    {'user_id': user_id},
-                                    {'username': username}
-                                ]
-                            },
+                            user_match_query,
                             {
                                 'timestamp': {
                                     '$gte': start_date,
@@ -1435,13 +1846,18 @@ class DatabaseManager:
             for participant in participants:
                 username = participant.replace('@', '')
                 
-                # Get trades within battle timeframe
+                # Get trades within battle timeframe using enhanced username matching
+                user_match_query = self.create_username_match_query(username=username)
+                battle_match = {
+                    '$and': [
+                        user_match_query,
+                        {'timestamp': {'$gte': start_date, '$lte': end_date}}
+                    ]
+                }
+                
                 pipeline = [
                     {
-                        '$match': {
-                            'username': username,
-                            'timestamp': {'$gte': start_date, '$lte': end_date}
-                        }
+                        '$match': battle_match
                     },
                     {
                         '$group': {
@@ -1494,7 +1910,16 @@ class DatabaseManager:
             if not hasattr(self, 'battle_points_collection'):
                 self.battle_points_collection = self.db['battle_points']
             
-            user_points = self.battle_points_collection.find_one({'username': username})
+            # Try different username formats
+            clean_username = username.replace('@', '') if username.startswith('@') else username
+            
+            # Try to find user with various username formats
+            user_points = None
+            for search_username in [username, f'@{clean_username}', clean_username]:
+                user_points = self.battle_points_collection.find_one({'username': search_username})
+                if user_points:
+                    break
+            
             if not user_points:
                 return {
                     'username': username,
@@ -1588,9 +2013,16 @@ class DatabaseManager:
             if not hasattr(self, 'battles_collection'):
                 self.battles_collection = self.db['battles']
             
-            # Find battles where user participated
+            # Try different username formats for battle participation
+            clean_username = username.replace('@', '') if username.startswith('@') else username
+            
+            # Find battles where user participated (check multiple username formats)
             battles = list(self.battles_collection.find(
-                {'participants': f'@{username}'},
+                {
+                    'participants': {
+                        '$in': [username, f'@{clean_username}', clean_username]
+                    }
+                },
                 {'_id': 0}
             ).sort('created_at', -1).limit(limit))
             

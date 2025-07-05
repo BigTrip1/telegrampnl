@@ -686,16 +686,85 @@ class MessageFormatter:
     
     @staticmethod
     def format_hall_of_fame_message(legends: list) -> str:
-        """Format hall of fame"""
+        """Format epic hall of fame with multiple legend categories"""
         if not legends:
-            return "🏛️ **Hall of Fame**\n\nThe legends are still being written..."
+            return """
+🏛️ **HALL OF FAME** 🏛️
+
+*The legends are still being written...*
+
+🌟 **BECOME A LEGEND:**
+📊 `/submit` - Add your trades
+💰 `/profitbattle` - Prove your worth
+⚔️ `/tradewar` - Show your dedication
+🎯 `/mystats` - Track your progress
+
+*Greatness awaits those who dare to trade!*
+            """.strip()
         
-        message = "🏛️ **Hall of Fame** 🏛️\n\n"
-        message += "🌟 These traders have achieved legendary status:\n\n"
+        # Create the epic Hall of Fame header
+        message = """
+🏛️ **HALL OF FAME** 🏛️
+*Where Trading Legends Are Born*
+
+═══════════════════════════
+
+🌟 **IMMORTAL LEGENDS OF LORE** 🌟
+
+        """.strip()
         
-        for legend in legends:
-            message += f"👑 {legend.get('name', 'Legend')}\n"
-            message += f"   🏆 {legend.get('achievement', 'Unknown')}\n\n"
+        # Sort legends by rank for proper display
+        sorted_legends = sorted(legends, key=lambda x: x.get('rank', 999))
+        
+        # Create legend entries
+        for legend in sorted_legends:
+            category = legend.get('category', 'Unknown Legend')
+            username = legend.get('username', 'Anonymous')
+            achievement = legend.get('achievement', 'Unknown')
+            subtitle = legend.get('subtitle', '')
+            description = legend.get('description', '')
+            icon = legend.get('icon', '⭐')
+            
+            # Clean username (remove @ if present for display)
+            display_username = username.replace('@', '') if username.startswith('@') else username
+            
+            message += f"\n\n{icon} **{category}**\n"
+            message += f"👑 **@{display_username}**\n"
+            message += f"🏆 **{achievement}**"
+            
+            if subtitle:
+                message += f" | {subtitle}"
+            
+            if description:
+                message += f"\n*{description}*"
+        
+        # Add footer with statistics and motivation
+        message += f"""
+
+═══════════════════════════
+
+🎯 **HALL OF FAME STATISTICS:**
+📊 **Active Legends:** {len(legends)}
+🏆 **Categories:** {len(set(l.get('category', '') for l in legends))}
+⚔️ **Total Achievements:** {len(legends)}
+
+🌟 **BECOME THE NEXT LEGEND:**
+💰 **Profit Emperor** - Dominate total profits
+🚀 **ROI Deity** - Master percentage returns  
+🐋 **Volume Titan** - Rule capital deployment
+⚔️ **Trade Gladiator** - Command trading volume
+🎯 **Precision Master** - Perfect your accuracy
+🏛️ **Battle Emperor** - Conquer the colosseum
+💥 **Single Trade Legend** - One epic trade
+
+**🔥 QUICK ACTIONS:**
+📊 `/mystats` - Check your potential
+💰 `/profitbattle` - Battle for glory
+⚔️ `/tradewar` - Prove your dedication
+🏆 `/leaderboard` - See current rankings
+
+*The Hall of Fame awaits your legend!*
+        """.strip()
         
         return message
     

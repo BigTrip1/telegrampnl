@@ -1,247 +1,276 @@
-# 🏛️ PNL Trading Bot - Complete System
+# Telegram PNL Bot 🚀
 
-## ✅ **Quick Start**
+**The Ultimate Trading Analytics & Community Competition Platform**
 
-### **1. Launch Your Bot**
+A sophisticated Telegram bot for tracking trading performance, community leaderboards, and epic profit battles. Built for serious traders who want professional-grade analytics with gamified competition.
+
+## 🌟 Key Features
+
+### 📊 **Advanced Trading Analytics**
+- **Personal Dashboard** (`/mystats`) - Complete trading performance overview
+- **Smart Username Matching** - Handles @username and username formats seamlessly
+- **ROI Calculations** - Accurate returns using USD-converted investment amounts
+- **Win Rate Analysis** - Detailed profit/loss statistics
+- **Portfolio Diversification** - Token distribution insights
+- **Trade History** - Complete chronological trading records
+
+### 🏆 **Dynamic Leaderboards**
+- **All-Time Champions** - Ultimate profit rankings
+- **Time-Based Boards** - Monthly, weekly, and daily leaders
+- **Trade Volume Kings** - Most active traders
+- **ROI Masters** - Best percentage returns
+- **Investment Categories** - Small cap, mid cap, large cap rankings
+- **Real-Time Updates** - Live recalculation with enhanced aggregation
+
+### ⚔️ **Epic Battle System**
+- **Profit Battles** - Compete for highest USD profit
+- **Trade Wars** - Volume-based trading competitions
+- **Custom Durations** - From 15 minutes to 4 weeks
+- **Gladiator Themes** - Epic announcements and victory celebrations
+- **Battle Points** - Persistent ranking system across all battles
+- **Real-Time Tracking** - Live updates during competitions
+
+### 🎮 **Gamification & Social**
+- **Achievement System** - Trading badges and milestones
+- **Streak Tracking** - Win/loss streaks monitoring
+- **Community Challenges** - Group competitions and events
+- **Token Intelligence** - Most profitable tokens analysis
+- **Market Sentiment** - Community trading trends
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.9+
+- MongoDB Atlas account
+- Telegram Bot Token (from @BotFather)
+- Channel/Group admin permissions
+
+### Installation
+
+1. **Clone Repository**
 ```bash
-# Double-click this file to start everything:
-LAUNCH_PNL_BOT.bat
+git clone https://github.com/yourusername/telegram-pnl-bot.git
+cd telegram-pnl-bot
 ```
 
-### **2. Alternative Methods**
+2. **Install Dependencies**
 ```bash
-# Direct Python execution:
+pip install -r requirements.txt
+```
+
+3. **Environment Setup**
+Create `.env` file:
+```env
+BOT_TOKEN=your_telegram_bot_token
+MONGODB_URI=your_mongodb_connection_string
+CHANNEL_IDS=your_channel_id_1,your_channel_id_2
+MODERATOR_IDS=your_user_id,other_mod_id
+
+# Test Mode (optional)
+TEST_MODE=false
+TEST_CHAT_IDS=test_chat_id_1,test_chat_id_2
+```
+
+4. **Database Setup**
+```bash
+python database.py  # Initialize collections and indexes
+```
+
+5. **Launch Bot**
+```bash
 python telegram_bot.py
-
-# Alternative runner:
-python run_bot.py
-
-# Manual dependency installation:
-MANUAL_INSTALL_DEPENDENCIES.bat
 ```
 
----
+## 📱 Mobile-Optimized Features
 
-## 📁 **Directory Structure**
+### **Smart Photo Detection**
+- Upload any screenshot → Bot automatically asks if it's a PNL entry
+- Works in groups and private chats
+- Supports both photo and document image formats
+- Clean form interface with message cleanup
 
-### **📂 Root Files (Core System)**
-```
-📁 telegrampnl/
-├── 🤖 telegram_bot.py          # Main bot application
-├── 🗄️ database.py              # Database manager
-├── 🛠️ utils.py                 # Utilities and helpers
-├── 🚀 run_bot.py               # Alternative bot runner
-├── 📦 requirements.txt         # Python dependencies
-├── 🔧 LAUNCH_PNL_BOT.bat       # Main launcher (CLICK THIS!)
-├── 🛠️ MANUAL_INSTALL_DEPENDENCIES.bat  # Backup installer
-└── 📖 README.md                # This file
-```
+### **Streamlined Submission**
+1. Upload screenshot 📸
+2. Select currency (USD/SOL) 💰
+3. Enter ticker symbol 🎯
+4. Input investment amount 💵
+5. Enter profit/loss ⚡
 
-### **📂 Organized Folders**
+**Result**: Clean final post with all form messages automatically deleted!
 
-#### **📁 docs/** - Technical Documentation
-- System documentation and technical guides
-- API references and development docs
-- Battle system documentation
+## 🏛️ Battle System Guide
 
-#### **📁 guides/** - User Guides
-- Step-by-step user tutorials
-- PNL submission guides
-- Deployment instructions
+### **Starting Battles**
 
-#### **📁 marketing/** - Marketing Materials
-- Social media posts
-- Community announcements
-- Battle system promotions
+**Profit Battle** (`/profitbattle`):
+- Objective: Earn highest USD profit
+- Duration: 15 minutes to 4 weeks
+- Players: 2-8 participants
+- Scoring: Total profit during battle period
 
-#### **📁 config/** - Configuration Files
-- Environment templates
-- Docker configuration
-- BotFather commands
-- Deployment configs
+**Trade War** (`/tradewar`):
+- Objective: Execute most trades
+- Duration: 15 minutes to 4 weeks  
+- Players: 2-8 participants
+- Scoring: Total trade count (profit irrelevant)
 
-#### **📁 utilities/** - Utility Scripts
-- Data import tools
-- Setup scripts
-- Maintenance utilities
+### **Battle Setup Process**
+1. Choose battle type
+2. Select number of players (2-8)
+3. Set duration (presets or custom)
+4. Add participants (@username format)
+5. Confirm and commence!
 
----
+### **Battle Points System**
+- 🥇 **1st Place**: 100 points + Champion badge
+- 🥈 **2nd Place**: 75 points + Silver medal
+- 🥉 **3rd Place**: 50 points + Bronze medal
+- 🎖️ **Participation**: 25 points + Warrior badge
 
-## 🎯 **Features**
+### **Epic Announcements**
+- Gladiator-themed battle starts
+- Leader change notifications
+- Victory celebrations with detailed stats
+- Hall of fame recognition
 
-### **📊 Complete PNL Analytics (49+ Commands)**
-- `/submit` - Submit trades with screenshots
-- `/leaderboard` - View rankings
-- `/mystats` - Personal analytics
-- `/monthlyreport` - Monthly summaries
-- **+45 more analytical commands**
+## 🔧 Command Reference
 
-### **🔥 Battle System (NEW!)**
+### **🚀 Getting Started**
+- `/start` - Bot welcome & feature overview
+- `/help` - Complete command guide
+- `/submit` - Submit PNL with screenshot
+- `/pnlguide` - Detailed submission instructions
 
-#### **⚔️ Profit Battles**
-- **Objective**: Earn the most USD profit during the battle period
-- **Command**: `/profitbattle`
-- **Duration**: 15 minutes to 4 weeks (customizable)
-- **Participants**: 2-8 players
+### **🏆 Leaderboards**
+- `/leaderboard` - All-time profit champions
+- `/monthlyleaderboard` - This month's top performers
+- `/weeklyleaderboard` - This week's winners
+- `/dailyleaderboard` - Today's leaders
+- `/tradeleader` - Most active traders
+- `/profitgoat` - Highest single profit holder
 
-#### **⚡ Trade Wars**
-- **Objective**: Execute the most trades during the battle period
-- **Command**: `/tradewar`
-- **Duration**: 15 minutes to 4 weeks (customizable)
-- **Participants**: 2-8 players
+### **📊 Personal Analytics**
+- `/mystats` - Complete trading dashboard
+- `/myhistory` - Your trading journey
+- `/compare @username` - Head-to-head analysis
+- `/portfolio` - Token diversification insights
+- `/monthlyreport` - Personal monthly summary
 
-#### **🏆 Battle Features**
-- Real-time leaderboard tracking
-- Automatic battle completion
-- Epic victory announcements
-- Battle points system
-- Hall of champions
-
-#### **🎮 Battle Commands**
-- `/profitbattle` - Start profit battles
-- `/tradewar` - Start trade count wars
+### **⚔️ Battle Commands**
+- `/profitbattle` - Start profit competition
+- `/tradewar` - Start trade count war
 - `/battlerules` - Complete battle guide
-- `/battlpoints` - Your battle stats
-- `/battleleaderboard` - Battle champions
+- `/battlpoints` - Your battle record
+- `/battleleaderboard` - Hall of champions
 
-### **🏛️ Advanced Features**
-- **Multi-channel posting**
-- **Auto photo detection**
-- **Real-time monitoring**
-- **Achievement system**
-- **Token intelligence**
+### **🎯 Token Intelligence**
+- `/tokenleader` - Most profitable tokens
+- `/tokenstats TICKER` - Deep token analysis
+- `/trendingcoins` - What's hot right now
+- `/search TICKER` - Find trades by token
 
----
+### **🎮 Gamification**
+- `/achievements` - Your trading badges
+- `/streaks` - Win/loss streak tracking
+- `/milestones` - Progress toward goals
+- `/randomtrade` - Get inspired by epic wins
 
-## 🚀 **Installation**
+## 🔧 Technical Architecture
 
-### **Method 1: One-Click Launch (Recommended)**
-1. **Double-click `LAUNCH_PNL_BOT.bat`**
-2. **Wait for setup to complete**
-3. **Bot starts automatically**
+### **Database Schema**
+- **PNLs Collection**: Trading records with enhanced indexing
+- **Battles Collection**: Competition tracking and results
+- **Users Collection**: Battle points and achievements
+- **Advanced Aggregation**: Real-time leaderboard calculations
 
-### **Method 2: Manual Setup**
+### **Enhanced Features**
+- **Username Normalization**: Handles @username vs username variations
+- **Currency Conversion**: Real-time SOL/USD rates via CoinGecko
+- **ROI Accuracy**: Uses USD-converted investment amounts
+- **Mobile Optimization**: Photo detection and clean interfaces
+- **Test Mode**: Safe testing without posting to channels
+
+### **Performance Optimizations**
+- MongoDB aggregation pipelines for complex queries
+- Efficient indexing for fast leaderboard generation
+- Caching for currency conversion rates
+- Parallel database operations
+
+## 🧪 Testing & Development
+
+### **Test Mode**
+```env
+TEST_MODE=true
+TEST_CHAT_IDS=your_test_chat_id
+```
+
+**Benefits**:
+- PNL submissions won't post to actual channels
+- Safe testing environment
+- All features work normally
+- Use `/testmode` to check status
+
+### **Development Setup**
 ```bash
-# Install dependencies
+# Install development dependencies
 pip install -r requirements.txt
 
-# Start bot
-python telegram_bot.py
+# Run tests
+python -m pytest tests/
+
+# Check code quality
+python -m py_compile telegram_bot.py
+python -m py_compile database.py
 ```
 
-### **Method 3: Troubleshooting**
-```bash
-# If you have issues, use the manual installer
-MANUAL_INSTALL_DEPENDENCIES.bat
-```
+## 📈 Recent Updates
+
+### **v2.1.0 - Enhanced Analytics & Battle System**
+- ✅ **Fixed /mystats command** - Resolved calculation errors and improved accuracy
+- ✅ **Enhanced Username Matching** - Comprehensive @username and username support
+- ✅ **Improved ROI Calculations** - Now uses USD-converted investment amounts
+- ✅ **Battle System Overhaul** - Gladiator-themed competitions with points
+- ✅ **Leaderboard Enhancements** - Better aggregation and performance indicators
+- ✅ **Mobile Optimization** - Photo auto-detection and clean interfaces
+- ✅ **Test Mode Implementation** - Safe testing environment
+
+### **v2.0.0 - Major Platform Upgrade**
+- ✅ **Complete Database Redesign** - Enhanced aggregation pipelines
+- ✅ **Battle System Launch** - Profit battles and trade wars
+- ✅ **Advanced Analytics** - Comprehensive trading insights
+- ✅ **Mobile-First Design** - Optimized for mobile users
+- ✅ **Community Features** - Social trading and competitions
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Documentation**: Check `/help` command in bot
+- **Issues**: GitHub Issues section
+- **Community**: Join our Telegram group
+- **Contact**: Reach out to bot administrators
+
+## 🌟 Acknowledgments
+
+- Built with python-telegram-bot library
+- MongoDB for robust data storage
+- CoinGecko API for real-time pricing
+- Community feedback and testing
 
 ---
 
-## 📋 **Requirements**
+**Ready to revolutionize your trading analytics?** 🚀
 
-### **System Requirements**
-- **Python 3.8+** (3.12.3 recommended)
-- **MongoDB** (local or cloud)
-- **Windows 10/11** (for .bat launchers)
+Add the bot to your group and start tracking your trading journey with professional-grade insights and epic community competitions!
 
-### **Dependencies**
-- `python-telegram-bot==20.7`
-- `pymongo`
-- `requests`
-- `python-dotenv`
-- `pillow`
-- `pytz`
-
----
-
-## ⚙️ **Configuration**
-
-### **Environment Variables**
-Create a `.env` file in the root directory:
-```env
-BOT_TOKEN=your_telegram_bot_token_here
-MONGODB_URI=mongodb://localhost:27017/pnl_bot
-CHANNEL_CONFIG={"pnl_channel": "channel_id_here"}
-```
-
-### **MongoDB Setup**
-- **Local:** Install MongoDB Community Server
-- **Cloud:** Use MongoDB Atlas
-- **Connection:** Auto-configured in launcher
-
----
-
-## 🔧 **Usage**
-
-### **For Users**
-1. **Start bot:** Double-click `LAUNCH_PNL_BOT.bat`
-2. **Add trades:** Use `/submit` command in Telegram
-3. **View stats:** Use `/mystats` or `/leaderboard`
-4. **Start battles:** Use `/profitbattle` or `/tradewar`
-
-### **For Developers**
-1. **Core files:** `telegram_bot.py`, `database.py`, `utils.py`
-2. **Documentation:** Check `docs/` folder
-3. **Configuration:** Check `config/` folder
-4. **Utilities:** Check `utilities/` folder
-
----
-
-## 📞 **Support**
-
-### **Common Issues**
-- **Dependencies:** Use `MANUAL_INSTALL_DEPENDENCIES.bat`
-- **Permissions:** Run as administrator
-- **Documentation:** Check `docs/INSTALLATION_TROUBLESHOOTING.md`
-
-### **File Locations**
-- **User guides:** `guides/` folder
-- **Technical docs:** `docs/` folder
-- **Configuration:** `config/` folder
-- **Troubleshooting:** `docs/INSTALLATION_TROUBLESHOOTING.md`
-
----
-
-## 🏆 **System Status**
-
-✅ **Fully Functional** - All 49+ commands working  
-✅ **Battle System** - Epic gladiator competitions  
-✅ **Database** - MongoDB integration  
-✅ **Multi-channel** - Professional posting  
-✅ **Auto-installer** - One-click setup  
-✅ **Error Handling** - Robust and reliable  
-
----
-
-## 🎯 **Quick Commands**
-
-### **Essential Commands**
-```bash
-# Start bot (main method)
-Double-click: LAUNCH_PNL_BOT.bat
-
-# Start bot (alternative)
-python telegram_bot.py
-
-# Install dependencies manually
-Double-click: MANUAL_INSTALL_DEPENDENCIES.bat
-
-# Check logs
-# Watch the Python terminal for real-time logs
-```
-
-### **Development Commands**
-```bash
-# Import historical data
-python utilities/data_import.py
-
-# System setup
-python utilities/setup.py
-
-# Database operations
-python -c "from database import db_manager; db_manager.test_connection()"
-```
-
----
-
-**🏛️ Your complete PNL trading bot system is ready! Double-click `LAUNCH_PNL_BOT.bat` to begin!** ⚔️ 
+*"Those who dare to trade, dare to win!"* ⚔️ 

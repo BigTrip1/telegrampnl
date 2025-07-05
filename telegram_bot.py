@@ -42,6 +42,10 @@ CHANNEL_ID = os.getenv('CHANNEL_ID')  # Keep for backward compatibility
 CHANNEL_IDS = [id.strip() for id in os.getenv('CHANNEL_IDS', '').split(',') if id.strip()]  # New multi-channel support
 MODERATOR_IDS = [int(id.strip()) for id in os.getenv('MODERATOR_IDS', '').split(',') if id.strip()]
 
+# Test mode configuration - prevents posting to actual channels during testing
+TEST_MODE = os.getenv('TEST_MODE', 'false').lower() == 'true'
+TEST_CHAT_IDS = [int(id.strip()) for id in os.getenv('TEST_CHAT_IDS', '').split(',') if id.strip()]
+
 # Parse channel configurations (can include topic IDs)
 def parse_channel_config(channel_config):
     """Parse channel configuration that may include topic IDs"""
@@ -134,80 +138,126 @@ Type `/help` to master all 40+ commands and unlock your trading potential.
         await self.clean_command_message(update, context)
     
     async def help_command(self, update: Update, context) -> None:
-        """Show comprehensive help guide"""
-        help_message = f"""
-🏆 **LORE PNL TRADING BOT - COMPLETE COMMAND LIST** 🏆
+        """Show streamlined help guide"""
+        help_message = """
+🏆 **LORE PNL BOT - QUICK GUIDE** 🏆
 
-**🎯 QUICK START:**
-• `/submit` - Submit your trade (screenshot required)
-• `/mystats` - View your trading statistics
-• `/leaderboard` - See community rankings
+**🚀 GET STARTED:**
+📱 `/submit` - Submit trade (just upload screenshot!)
+📊 `/mystats` - Your trading dashboard
+🏅 `/leaderboard` - Top community traders
 
-**📊 CORE COMMANDS:**
-• `/submit` - Submit trade with screenshot
-• `/mystats` - Your personal trading stats
-• `/leaderboard` - Community leaderboard (Top 10)
-• `/fullboard` - Complete leaderboard (All traders)
-• `/achievements` - View your trading achievements
-• `/loretotalprofit` - Community total profit stats
+**📈 POPULAR COMMANDS:**
+💰 `/loretotalprofit` - Community overview
+🎯 `/profitgoat` - Biggest single profit
+👑 `/roi` - Best percentage returns
+🏆 `/achievements` - Your trading badges
 
-**🔥 BATTLE SYSTEM:**
-⚔️ `/profitbattle` - Start profit battles
-⚡ `/tradewar` - Start trade count wars
-🏆 `/battlerules` - Complete battle guide
-📊 `/battlpoints` - Your battle points & record
-🎖️ `/battleleaderboard` - Hall of battle champions
+**⚔️ BATTLE SYSTEM:**
+💰 `/profitbattle` - Start profit competition
+⚡ `/tradewar` - Start trade count war
+📋 `/battlerules` - Battle guide
+🏅 `/battlpoints` - Your battle record
 
-**📈 ANALYSIS & INSIGHTS:**
-• `/analysis` - Advanced trading analysis
-• `/insights` - Market insights and trends
-• `/sentiment` - Weekly sentiment analysis
-• `/profitability` - Profitability analysis
-• `/tokenanalysis` - Token performance analysis
-• `/compare` - Compare trader performance
+**🔍 DISCOVER:**
+🪙 `/tokenleader` - Best performing tokens
+🔎 `/search TICKER` - Find token trades
+👤 `/compare @user` - Head-to-head stats
+🎲 `/randomtrade` - Get inspired
 
-**🎯 SPECIALIZED COMMANDS:**
-• `/topprofits` - Highest profit trades
-• `/topperformers` - Top performing traders
-• `/weeklyreport` - Weekly trading report
-• `/monthlyreport` - Monthly trading report
-• `/filters` - Set custom leaderboard filters
-• `/recenttrades` - View recent community trades
+**💡 QUICK TIPS:**
+• Upload any screenshot → Bot asks if it's PNL
+• All trades need screenshot proof
+• Join battles to earn points & glory
+• Check `/filters` for all commands
 
-**🏆 LEADERBOARD VARIATIONS:**
-• `/leaderboard` - Standard top 10
-• `/fullboard` - Complete rankings
-• `/weeklyboard` - Weekly leaderboard
-• `/monthlyboard` - Monthly leaderboard
-• `/battleleaderboard` - Battle champions
+**🌟 LORE Token Benefits:**
+Hold LORE for premium features & VIP access!
+🔗 **Get LORE:** https://lore.trade/access
 
-**🎮 BATTLE COMMANDS:**
-• `/profitbattle` - Profit competition battles
-• `/tradewar` - Trade count competition wars
-• `/battlerules` - Battle system guide
-• `/battlpoints` - Your battle statistics
-• `/battleleaderboard` - Battle hall of fame
-
-**💡 TIPS:**
-• Screenshots are required for all trades
-• Use `/mystats` to track your progress
-• Join battles to earn battle points
-• Check `/achievements` for milestones
-• Use analysis commands for insights
-
-**🚀 PREMIUM FEATURES:**
-Hold LORE tokens for exclusive benefits!
-• Advanced analytics
-• Priority support
-• Premium insights
-• VIP community access
-
-**Token:** G2AbNxcyXV6QiXptMm6MuQPBDJYp9AVQHTdWAV1Wpump
-**Access:** https://lore.trade/access
-
-Ready to dominate the markets? Start with `/submit` to log your first trade! 📈
+Ready to track your trading journey? Start with `/submit`! 🚀
         """
         await update.message.reply_text(help_message, parse_mode=ParseMode.MARKDOWN)
+        await self.clean_command_message(update, context)
+    
+    async def summary_command(self, update: Update, context) -> None:
+        """Show quick community summary"""
+        try:
+            # Get essential data
+            total_data = db_manager.get_total_profit_combined()
+            user_id = update.effective_user.id
+            username = update.effective_user.username or update.effective_user.first_name or f"User{user_id}"
+            user_stats = db_manager.get_user_stats(user_id, username)
+            
+            if not total_data:
+                await self.safe_reply(update, "📊 No community data available yet.")
+                return
+            
+            # Community metrics
+            total_profit = total_data.get('total_profit_usd', 0)
+            total_trades = total_data.get('total_trades', 0)
+            trader_count = total_data.get('trader_count', 0)
+            win_rate = total_data.get('win_rate', 0)
+            
+            # User metrics (if available)
+            user_section = ""
+            if user_stats:
+                user_profit = user_stats.get('total_profit_usd', 0)
+                user_trades = user_stats.get('total_trades', 0)
+                user_winrate = user_stats.get('win_rate', 0)
+                user_section = f"""
+**👤 YOUR STATS:**
+💰 ${user_profit:,.0f} | 🔄 {user_trades} trades | 🎯 {user_winrate:.0f}% wins
+"""
+            
+            message = f"""
+📊 **LORE COMMUNITY SNAPSHOT** 📊
+
+**🌍 COMMUNITY:**
+💰 **${total_profit:,.0f} Total Profit**
+👥 {trader_count:,} Traders | 🔄 {total_trades:,} Trades
+🎯 {win_rate:.0f}% Community Win Rate
+{user_section}
+**⚡ QUICK ACTIONS:**
+📱 `/submit` - Add trade | 📊 `/mystats` - Full stats
+🏅 `/leaderboard` - Rankings | ⚔️ `/profitbattle` - Compete
+
+*Use `/help` for all commands*
+            """
+            
+            await self.safe_reply(update, message.strip(), parse_mode=ParseMode.MARKDOWN)
+            await self.clean_command_message(update, context)
+            
+        except Exception as e:
+            logger.error(f"Error in summary command: {e}")
+            await self.safe_reply(update, "❌ Error retrieving summary. Try again.")
+    
+    async def testmode_command(self, update: Update, context) -> None:
+        """Show test mode status and configuration"""
+        current_chat_id = update.effective_chat.id
+        is_test_chat = current_chat_id in TEST_CHAT_IDS if TEST_CHAT_IDS else False
+        
+        status_message = f"""
+🧪 **TEST MODE STATUS** 🧪
+
+**🔧 Configuration:**
+• Test Mode: {'✅ ENABLED' if TEST_MODE else '❌ DISABLED'}
+• Current Chat: `{current_chat_id}`
+• Test Chats: {TEST_CHAT_IDS if TEST_CHAT_IDS else 'None configured'}
+
+**📍 Current Status:**
+• Is Test Chat: {'✅ YES' if is_test_chat else '❌ NO'}
+• Channel Posting: {'🚫 BLOCKED' if (TEST_MODE or is_test_chat) else '✅ ENABLED'}
+
+**🎯 What this means:**
+{'• PNL submissions will NOT post to channels' if (TEST_MODE or is_test_chat) else '• PNL submissions WILL post to channels'}
+{'• Safe for testing!' if (TEST_MODE or is_test_chat) else '• ⚠️ LIVE MODE - posts will go to actual channels!'}
+
+**⚙️ To enable test mode:**
+Set `TEST_MODE=true` in .env OR add this chat ID to `TEST_CHAT_IDS`
+        """
+        
+        await self.safe_reply(update, status_message.strip(), parse_mode=ParseMode.MARKDOWN)
         await self.clean_command_message(update, context)
     
     async def submit_command(self, update: Update, context) -> int:
@@ -672,8 +722,15 @@ Ready to dominate the markets? Start with `/submit` to log your first trade! �
                     except Exception as e:
                         logger.warning(f"Could not delete message {message_id}: {e}")
                 
-                # Post to all configured channels
-                if CHANNELS_TO_POST:
+                # Check if we're in test mode or testing chat
+                current_chat_id = update.effective_chat.id
+                is_test_chat = current_chat_id in TEST_CHAT_IDS if TEST_CHAT_IDS else False
+                
+                # Post to channels only if NOT in test mode and NOT in test chat
+                if TEST_MODE or is_test_chat:
+                    logger.info(f"🧪 TEST MODE: Skipping channel posting (TEST_MODE={TEST_MODE}, is_test_chat={is_test_chat})")
+                    logger.info(f"📍 Current chat: {current_chat_id}, Test chats: {TEST_CHAT_IDS}")
+                elif CHANNELS_TO_POST:
                     logger.info(f"📢 Posting PNL to {len(CHANNELS_TO_POST)} channels")
                     
                     for channel_config in CHANNELS_TO_POST:
@@ -797,62 +854,433 @@ Ready to dominate the markets? Start with `/submit` to log your first trade! �
         return ConversationHandler.END
     
     async def leaderboard_command(self, update: Update, context) -> None:
-        """Show all-time leaderboard"""
-        leaders = db_manager.get_all_time_leaderboard()
-        message = message_formatter.format_leaderboard_message(
-            "All-Time Leaderboard", leaders, currency_converter
-        )
-        await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
-        await self.clean_command_message(update, context)
+        """Show enhanced all-time leaderboard with improved calculations"""
+        try:
+            leaders = db_manager.get_all_time_leaderboard()
+            
+            if not leaders:
+                await self.safe_reply(update, "📊 No leaderboard data available yet.")
+                return
+            
+            # Enhanced leaderboard formatting
+            leaderboard_text = "🏆 **ALL-TIME PROFIT CHAMPIONS** 🏆\n\n"
+            
+            for i, leader in enumerate(leaders[:10], 1):
+                username = leader.get('username', 'Unknown')
+                profit_usd = leader.get('total_profit_usd', 0)
+                trades = leader.get('trade_count', 0)
+                win_rate = leader.get('win_rate', 0)  # Now calculated in database
+                
+                # Rank emojis
+                if i == 1:
+                    rank_emoji = "👑"
+                elif i == 2:
+                    rank_emoji = "🥈"
+                elif i == 3:
+                    rank_emoji = "🥉"
+                else:
+                    rank_emoji = f"{i}️⃣"
+                
+                # Format profit with appropriate precision
+                if profit_usd >= 1000:
+                    profit_display = f"${profit_usd:,.0f}"
+                else:
+                    profit_display = f"${profit_usd:.0f}"
+                
+                # Add performance indicators
+                if win_rate >= 80:
+                    performance_emoji = "🔥"
+                elif win_rate >= 60:
+                    performance_emoji = "⭐"
+                elif win_rate >= 40:
+                    performance_emoji = "📈"
+                else:
+                    performance_emoji = "📊"
+                
+                leaderboard_text += f"{rank_emoji} **@{username}** {performance_emoji}\n"
+                leaderboard_text += f"    💰 {profit_display} | 🔄 {trades} trades | 🎯 {win_rate:.0f}%\n\n"
+            
+            # Add footer with quick actions
+            leaderboard_text += "**🚀 COMPETE:**\n"
+            leaderboard_text += "📊 `/mystats` - Your rank | ⚔️ `/profitbattle` - Challenge"
+            
+            await self.safe_reply(update, leaderboard_text, parse_mode=ParseMode.MARKDOWN)
+            await self.clean_command_message(update, context)
+            
+        except Exception as e:
+            logger.error(f"Error in leaderboard command: {e}")
+            await self.safe_reply(update, "❌ Error loading leaderboard. Try again.")
     
     async def monthly_leaderboard_command(self, update: Update, context) -> None:
-        """Show monthly leaderboard"""
-        year, month = date_helper.get_current_month_year()
-        leaders = db_manager.get_monthly_leaderboard(year, month)
-        
-        month_names = ["", "January", "February", "March", "April", "May", "June",
-                      "July", "August", "September", "October", "November", "December"]
-        title = f"{month_names[month]} {year} Leaderboard"
-        
-        message = message_formatter.format_leaderboard_message(
-            title, leaders, currency_converter
-        )
-        await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+        """Show enhanced monthly leaderboard with improved formatting"""
+        try:
+            # Get current date info
+            now = datetime.now(timezone.utc)
+            year, month = date_helper.get_current_month_year()
+            leaders = db_manager.get_monthly_leaderboard(year, month)
+            
+            month_names = ["", "January", "February", "March", "April", "May", "June",
+                          "July", "August", "September", "October", "November", "December"]
+            
+            # Create enhanced leaderboard
+            if not leaders:
+                message = f"""
+📅 **{month_names[month]} {year} LEADERBOARD** 📅
+
+🏆 No trades recorded this month yet!
+
+🚀 **Be the first to compete:**
+📱 `/submit` - Add your first trade
+📊 `/mystats` - Check your stats
+⚔️ `/profitbattle` - Challenge others
+
+*Current date: {now.strftime('%d/%m/%Y %H:%M UTC')}*
+                """.strip()
+            else:
+                # Enhanced monthly leaderboard formatting
+                leaderboard_text = f"📅 **{month_names[month]} {year} PROFIT LEADERS** 📅\n\n"
+                
+                for i, leader in enumerate(leaders[:10], 1):
+                    username = leader.get('username', 'Unknown')
+                    profit_usd = leader.get('total_profit_usd', 0)
+                    trades = leader.get('trade_count', 0)
+                    win_rate = leader.get('win_rate', 0)
+                    roi = leader.get('roi', 0)
+                    
+                    # Rank emojis
+                    if i == 1:
+                        rank_emoji = "👑"
+                    elif i == 2:
+                        rank_emoji = "🥈"
+                    elif i == 3:
+                        rank_emoji = "🥉"
+                    else:
+                        rank_emoji = f"{i}️⃣"
+                    
+                    # Format profit
+                    if profit_usd >= 1000:
+                        profit_display = f"${profit_usd:,.0f}"
+                    else:
+                        profit_display = f"${profit_usd:.0f}"
+                    
+                    # Performance indicators for monthly performance
+                    if win_rate >= 80 and profit_usd >= 500:
+                        performance_emoji = "🔥"
+                    elif profit_usd >= 1000:
+                        performance_emoji = "🚀"
+                    elif win_rate >= 70:
+                        performance_emoji = "⭐"
+                    elif profit_usd >= 100:
+                        performance_emoji = "📈"
+                    elif profit_usd > 0:
+                        performance_emoji = "📊"
+                    else:
+                        performance_emoji = "😅"
+                    
+                    leaderboard_text += f"{rank_emoji} **@{username}** {performance_emoji}\n"
+                    leaderboard_text += f"    💰 {profit_display} | 🔄 {trades} trades | 🎯 {win_rate:.0f}%\n\n"
+                
+                # Add monthly stats summary
+                total_profit = sum(leader.get('total_profit_usd', 0) for leader in leaders)
+                total_trades = sum(leader.get('trade_count', 0) for leader in leaders)
+                
+                leaderboard_text += f"**📊 MONTH SUMMARY:**\n"
+                leaderboard_text += f"💰 Total Community: ${total_profit:,.0f}\n"
+                leaderboard_text += f"🔄 Total Trades: {total_trades:,}\n"
+                leaderboard_text += f"👥 Active Traders: {len(leaders)}\n\n"
+                
+                leaderboard_text += "**🚀 COMPETE:**\n"
+                leaderboard_text += "📊 `/mystats` - Your rank | ⚔️ `/profitbattle` - Challenge"
+                
+                message = leaderboard_text
+            
+            await self.safe_reply(update, message, parse_mode=ParseMode.MARKDOWN)
+            await self.clean_command_message(update, context)
+            
+        except Exception as e:
+            logger.error(f"Error in monthly leaderboard command: {e}")
+            await self.safe_reply(update, "❌ Error loading monthly leaderboard. Try again.")
     
     async def weekly_leaderboard_command(self, update: Update, context) -> None:
-        """Show weekly leaderboard"""
-        start_date, end_date = date_helper.get_current_week_range()
-        leaders = db_manager.get_weekly_leaderboard(start_date, end_date)
-        
-        title = f"This Week's Leaderboard ({start_date.strftime('%d/%m')} - {end_date.strftime('%d/%m')})"
-        message = message_formatter.format_leaderboard_message(
-            title, leaders, currency_converter
-        )
-        await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+        """Show enhanced weekly leaderboard with improved formatting"""
+        try:
+            # Get current week date range
+            start_date, end_date = date_helper.get_current_week_range()
+            leaders = db_manager.get_weekly_leaderboard(start_date, end_date)
+            
+            # Create enhanced leaderboard
+            if not leaders:
+                message = f"""
+📅 **THIS WEEK'S LEADERBOARD** 📅
+({start_date.strftime('%d/%m')} - {end_date.strftime('%d/%m')})
+
+🏆 No trades recorded this week yet!
+
+🚀 **Be the first to compete:**
+📱 `/submit` - Add your first trade
+📊 `/mystats` - Check your stats
+⚔️ `/profitbattle` - Challenge others
+
+*Week runs Monday to Sunday*
+                """.strip()
+            else:
+                # Enhanced weekly leaderboard formatting
+                leaderboard_text = f"📅 **THIS WEEK'S PROFIT LEADERS** 📅\n"
+                leaderboard_text += f"({start_date.strftime('%d/%m')} - {end_date.strftime('%d/%m')})\n\n"
+                
+                for i, leader in enumerate(leaders[:10], 1):
+                    username = leader.get('username', 'Unknown')
+                    profit_usd = leader.get('total_profit_usd', 0)
+                    trades = leader.get('trade_count', 0)
+                    win_rate = leader.get('win_rate', 0)
+                    roi = leader.get('roi', 0)
+                    
+                    # Rank emojis
+                    if i == 1:
+                        rank_emoji = "👑"
+                    elif i == 2:
+                        rank_emoji = "🥈"
+                    elif i == 3:
+                        rank_emoji = "🥉"
+                    else:
+                        rank_emoji = f"{i}️⃣"
+                    
+                    # Format profit
+                    if profit_usd >= 1000:
+                        profit_display = f"${profit_usd:,.0f}"
+                    else:
+                        profit_display = f"${profit_usd:.0f}"
+                    
+                    # Performance indicators for weekly performance
+                    if win_rate >= 80 and profit_usd >= 200:
+                        performance_emoji = "🔥"
+                    elif profit_usd >= 500:
+                        performance_emoji = "🚀"
+                    elif win_rate >= 70:
+                        performance_emoji = "⭐"
+                    elif profit_usd >= 50:
+                        performance_emoji = "📈"
+                    elif profit_usd > 0:
+                        performance_emoji = "📊"
+                    else:
+                        performance_emoji = "😅"
+                    
+                    leaderboard_text += f"{rank_emoji} **@{username}** {performance_emoji}\n"
+                    leaderboard_text += f"    💰 {profit_display} | 🔄 {trades} trades | 🎯 {win_rate:.0f}%\n\n"
+                
+                # Add weekly stats summary
+                total_profit = sum(leader.get('total_profit_usd', 0) for leader in leaders)
+                total_trades = sum(leader.get('trade_count', 0) for leader in leaders)
+                
+                leaderboard_text += f"**📊 WEEK SUMMARY:**\n"
+                leaderboard_text += f"💰 Total Community: ${total_profit:,.0f}\n"
+                leaderboard_text += f"🔄 Total Trades: {total_trades:,}\n"
+                leaderboard_text += f"👥 Active Traders: {len(leaders)}\n\n"
+                
+                leaderboard_text += "**🚀 COMPETE:**\n"
+                leaderboard_text += "📊 `/mystats` - Your rank | ⚔️ `/profitbattle` - Challenge"
+                
+                message = leaderboard_text
+            
+            await self.safe_reply(update, message, parse_mode=ParseMode.MARKDOWN)
+            await self.clean_command_message(update, context)
+            
+        except Exception as e:
+            logger.error(f"Error in weekly leaderboard command: {e}")
+            await self.safe_reply(update, "❌ Error loading weekly leaderboard. Try again.")
     
     async def daily_leaderboard_command(self, update: Update, context) -> None:
-        """Show daily leaderboard"""
-        today = datetime.now(timezone.utc)
-        leaders = db_manager.get_daily_leaderboard(today)
-        
-        title = f"Today's Leaderboard ({today.strftime('%d/%m/%Y')})"
-        message = message_formatter.format_leaderboard_message(
-            title, leaders, currency_converter
-        )
-        await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+        """Show enhanced daily leaderboard with improved formatting"""
+        try:
+            # Get current date
+            today = datetime.now(timezone.utc)
+            leaders = db_manager.get_daily_leaderboard(today)
+            
+            # Create enhanced leaderboard
+            if not leaders:
+                message = f"""
+📅 **TODAY'S LEADERBOARD** 📅
+({today.strftime('%d/%m/%Y')})
+
+🏆 No trades recorded today yet!
+
+🚀 **Be the first to trade today:**
+📱 `/submit` - Add your first trade
+📊 `/mystats` - Check your stats
+⚔️ `/profitbattle` - Challenge others
+
+*Fresh day, fresh opportunities!*
+                """.strip()
+            else:
+                # Enhanced daily leaderboard formatting
+                leaderboard_text = f"📅 **TODAY'S PROFIT LEADERS** 📅\n"
+                leaderboard_text += f"({today.strftime('%d/%m/%Y')})\n\n"
+                
+                for i, leader in enumerate(leaders[:10], 1):
+                    username = leader.get('username', 'Unknown')
+                    profit_usd = leader.get('total_profit_usd', 0)
+                    trades = leader.get('trade_count', 0)
+                    win_rate = leader.get('win_rate', 0)
+                    roi = leader.get('roi', 0)
+                    
+                    # Rank emojis
+                    if i == 1:
+                        rank_emoji = "👑"
+                    elif i == 2:
+                        rank_emoji = "🥈"
+                    elif i == 3:
+                        rank_emoji = "🥉"
+                    else:
+                        rank_emoji = f"{i}️⃣"
+                    
+                    # Format profit
+                    if profit_usd >= 1000:
+                        profit_display = f"${profit_usd:,.0f}"
+                    else:
+                        profit_display = f"${profit_usd:.0f}"
+                    
+                    # Performance indicators for daily performance
+                    if win_rate == 100 and profit_usd >= 100:
+                        performance_emoji = "🔥"
+                    elif profit_usd >= 200:
+                        performance_emoji = "🚀"
+                    elif win_rate >= 80:
+                        performance_emoji = "⭐"
+                    elif profit_usd >= 25:
+                        performance_emoji = "📈"
+                    elif profit_usd > 0:
+                        performance_emoji = "📊"
+                    else:
+                        performance_emoji = "😅"
+                    
+                    leaderboard_text += f"{rank_emoji} **@{username}** {performance_emoji}\n"
+                    leaderboard_text += f"    💰 {profit_display} | 🔄 {trades} trades | 🎯 {win_rate:.0f}%\n\n"
+                
+                # Add daily stats summary
+                total_profit = sum(leader.get('total_profit_usd', 0) for leader in leaders)
+                total_trades = sum(leader.get('trade_count', 0) for leader in leaders)
+                
+                leaderboard_text += f"**📊 TODAY'S SUMMARY:**\n"
+                leaderboard_text += f"💰 Total Community: ${total_profit:,.0f}\n"
+                leaderboard_text += f"🔄 Total Trades: {total_trades:,}\n"
+                leaderboard_text += f"👥 Active Traders: {len(leaders)}\n\n"
+                
+                leaderboard_text += "**🚀 COMPETE:**\n"
+                leaderboard_text += "📊 `/mystats` - Your rank | ⚔️ `/profitbattle` - Challenge"
+                
+                message = leaderboard_text
+            
+            await self.safe_reply(update, message, parse_mode=ParseMode.MARKDOWN)
+            await self.clean_command_message(update, context)
+            
+        except Exception as e:
+            logger.error(f"Error in daily leaderboard command: {e}")
+            await self.safe_reply(update, "❌ Error loading daily leaderboard. Try again.")
     
     async def trade_leader_command(self, update: Update, context) -> None:
-        """Show trade count leaderboard for this week"""
-        start_date, end_date = date_helper.get_current_week_range()
-        leaders = db_manager.get_trade_count_leaderboard(start_date, end_date)
-        
-        title = f"This Week's Trade Leaders ({start_date.strftime('%d/%m')} - {end_date.strftime('%d/%m')})"
-        message = message_formatter.format_trade_leaderboard_message(title, leaders)
-        await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+        """Show enhanced trade count leaderboard for this week"""
+        try:
+            # Get current week date range
+            start_date, end_date = date_helper.get_current_week_range()
+            leaders = db_manager.get_trade_count_leaderboard(start_date, end_date)
+            
+            # Create enhanced leaderboard
+            if not leaders:
+                message = f"""
+📊 **THIS WEEK'S TRADE LEADERS** 📊
+({start_date.strftime('%d/%m')} - {end_date.strftime('%d/%m')})
+
+🔥 No trade warriors this week yet!
+
+🚀 **Be the first to dominate:**
+📱 `/submit` - Add your first trade
+📊 `/mystats` - Check your stats
+⚔️ `/tradewar` - Start trade count battle
+
+*Volume is king! Trade more, lead more!*
+                """.strip()
+            else:
+                # Enhanced trade count leaderboard formatting
+                leaderboard_text = f"📊 **THIS WEEK'S TRADE VOLUME KINGS** 📊\n"
+                leaderboard_text += f"({start_date.strftime('%d/%m')} - {end_date.strftime('%d/%m')})\n\n"
+                
+                for i, leader in enumerate(leaders[:10], 1):
+                    username = leader.get('username', 'Unknown')
+                    trade_count = leader.get('trade_count', 0)
+                    profit_usd = leader.get('total_profit_usd', 0)
+                    win_rate = leader.get('win_rate', 0)
+                    avg_profit = leader.get('avg_profit_per_trade', 0)
+                    
+                    # Rank emojis
+                    if i == 1:
+                        rank_emoji = "👑"
+                    elif i == 2:
+                        rank_emoji = "🥈"
+                    elif i == 3:
+                        rank_emoji = "🥉"
+                    else:
+                        rank_emoji = f"{i}️⃣"
+                    
+                    # Format profit
+                    if profit_usd >= 1000:
+                        profit_display = f"${profit_usd:,.0f}"
+                    else:
+                        profit_display = f"${profit_usd:.0f}"
+                    
+                    # Performance indicators for trade volume leaders
+                    if trade_count >= 20 and win_rate >= 70:
+                        performance_emoji = "🔥"  # High volume + high win rate
+                    elif trade_count >= 15:
+                        performance_emoji = "⚡"  # High volume
+                    elif win_rate >= 80:
+                        performance_emoji = "🎯"  # High accuracy
+                    elif profit_usd >= 500:
+                        performance_emoji = "💰"  # High profit
+                    elif trade_count >= 10:
+                        performance_emoji = "📈"  # Good volume
+                    elif trade_count >= 5:
+                        performance_emoji = "📊"  # Moderate volume
+                    else:
+                        performance_emoji = "🚀"  # Getting started
+                    
+                    leaderboard_text += f"{rank_emoji} **@{username}** {performance_emoji}\n"
+                    leaderboard_text += f"    ⚡ **{trade_count} trades** | 💰 {profit_display} | 🎯 {win_rate:.0f}%\n"
+                    
+                    # Add average profit per trade for context
+                    if avg_profit >= 0:
+                        leaderboard_text += f"    📊 Avg: ${avg_profit:.0f}/trade\n\n"
+                    else:
+                        leaderboard_text += f"    📊 Avg: ${avg_profit:.0f}/trade\n\n"
+                
+                # Add weekly volume summary
+                total_trades = sum(leader.get('trade_count', 0) for leader in leaders)
+                total_profit = sum(leader.get('total_profit_usd', 0) for leader in leaders)
+                avg_trades_per_trader = total_trades / len(leaders) if leaders else 0
+                
+                leaderboard_text += f"**📊 WEEK VOLUME SUMMARY:**\n"
+                leaderboard_text += f"⚡ Total Trades: {total_trades:,}\n"
+                leaderboard_text += f"💰 Total Profit: ${total_profit:,.0f}\n"
+                leaderboard_text += f"📈 Avg Trades/Trader: {avg_trades_per_trader:.1f}\n"
+                leaderboard_text += f"👥 Active Traders: {len(leaders)}\n\n"
+                
+                leaderboard_text += "**🚀 COMPETE:**\n"
+                leaderboard_text += "📊 `/mystats` - Your rank | ⚔️ `/tradewar` - Volume battle"
+                
+                message = leaderboard_text
+            
+            await self.safe_reply(update, message, parse_mode=ParseMode.MARKDOWN)
+            await self.clean_command_message(update, context)
+            
+        except Exception as e:
+            logger.error(f"Error in trade leader command: {e}")
+            await self.safe_reply(update, "❌ Error loading trade leaders. Try again.")
     
     async def profit_goat_command(self, update: Update, context) -> None:
         """Show the profit GOAT"""
         goat_data = db_manager.get_profit_goat()
+        if not goat_data:
+            await update.message.reply_text("📊 No profit GOAT data available yet.")
+            return
         message = message_formatter.format_profit_goat_message(goat_data)
         await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
     
@@ -908,21 +1336,150 @@ Ready to dominate the markets? Start with `/submit` to log your first trade! �
     # ===== PERSONAL ANALYTICS COMMANDS =====
     
     async def mystats_command(self, update: Update, context) -> None:
-        """Show personal trading statistics"""
-        user_id = update.effective_user.id
-        username = update.effective_user.username or update.effective_user.first_name or f"User{user_id}"
-        
-        # Get user's trading stats
-        stats = db_manager.get_user_stats(user_id, username)
-        
-        if not stats:
-            await update.message.reply_text("📊 No trading data found for your account. Use `/submit` to add your first trade!")
+        """Show enhanced personal trading statistics"""
+        try:
+            user_id = update.effective_user.id
+            username = update.effective_user.username or update.effective_user.first_name or f"User{user_id}"
+            
+            # Get user's trading stats with enhanced matching
+            stats = db_manager.get_user_stats(str(user_id), username)
+            
+            if not stats:
+                # Try to find user with direct database query for debugging
+                debug_conditions = db_manager.create_username_match_conditions(str(user_id), username)
+                debug_query = list(db_manager.pnls_collection.find({
+                    '$or': debug_conditions
+                }).limit(5))
+                
+                if debug_query:
+                    # Show debug info about found trades
+                    trade_usernames = [trade.get('username', 'N/A') for trade in debug_query]
+                    trade_user_ids = [trade.get('user_id', 'N/A') for trade in debug_query]
+                    
+                    debug_message = f"""
+🔍 **DEBUG INFO** 🔍
+
+**Found {len(debug_query)} trades but stats calculation failed:**
+
+**Your Info:**
+• User ID: `{user_id}`
+• Username: `{username}`
+
+**Found Trades:**
+• Trade Usernames: {trade_usernames}
+• Trade User IDs: {trade_user_ids}
+
+**Possible Issues:**
+• Username format mismatch (@ symbol)
+• User ID type mismatch (string vs number)
+• Database aggregation error
+
+Please contact admin with this debug info.
+                    """.strip()
+                    
+                    await self.safe_reply(update, debug_message, parse_mode=ParseMode.MARKDOWN)
+                    logger.warning(f"Found {len(debug_query)} trades for user {username} (ID: {user_id}) but stats calculation failed. Trade usernames: {trade_usernames}, Trade user_ids: {trade_user_ids}")
+                else:
+                    await self.safe_reply(update, "📊 No trading data found for your account. Use `/submit` to add your first trade!")
+                return
+            
+            # Enhanced stats message formatting
+            message = f"📊 **{username}'s Trading Dashboard** 📊\n\n"
+            
+            # Core Performance Section
+            message += f"**🎯 CORE PERFORMANCE:**\n"
+            message += f"📈 **Total Trades**: {stats.get('total_trades', 0):,}\n"
+            message += f"💰 **Total Profit**: ${stats.get('total_profit_usd', 0):,.2f}\n"
+            message += f"💵 **Total Invested**: ${stats.get('total_investment_usd', 0):,.2f}\n"
+            
+            # ROI with context
+            roi = stats.get('roi', 0)
+            if roi > 100:
+                roi_emoji = "🚀"
+                roi_desc = "MOON SHOT!"
+            elif roi > 50:
+                roi_emoji = "🔥"
+                roi_desc = "EXCELLENT!"
+            elif roi > 0:
+                roi_emoji = "✅"
+                roi_desc = "Profitable"
+            elif roi > -25:
+                roi_emoji = "📉"
+                roi_desc = "Minor Loss"
+            else:
+                roi_emoji = "💎"
+                roi_desc = "Diamond Hands"
+            
+            message += f"🎯 **ROI**: {roi_emoji} {roi:+.2f}% ({roi_desc})\n\n"
+            
+            # Win/Loss Analysis
+            message += f"**📊 WIN/LOSS ANALYSIS:**\n"
+            message += f"✅ **Winning Trades**: {stats.get('winning_trades', 0):,}\n"
+            message += f"❌ **Losing Trades**: {stats.get('losing_trades', 0):,}\n"
+            
+            win_rate = stats.get('win_rate', 0)
+            if win_rate >= 70:
+                win_emoji = "🎯"
+                win_desc = "Sharp Shooter"
+            elif win_rate >= 50:
+                win_emoji = "⚖️"
+                win_desc = "Balanced"
+            elif win_rate >= 30:
+                win_emoji = "📈"
+                win_desc = "Learning"
+            else:
+                win_emoji = "🛡️"
+                win_desc = "Defensive"
+            
+            message += f"📊 **Win Rate**: {win_emoji} {win_rate:.1f}% ({win_desc})\n\n"
+            
+            # Performance Highlights
+            message += f"**🏆 PERFORMANCE HIGHLIGHTS:**\n"
+            message += f"🚀 **Best Trade**: ${stats.get('best_trade', 0):,.2f}\n"
+            message += f"😅 **Worst Trade**: ${stats.get('worst_trade', 0):,.2f}\n"
+            message += f"📈 **Average Profit**: ${stats.get('avg_profit', 0):,.2f}\n"
+            message += f"🎭 **Tokens Traded**: {stats.get('token_count', 0):,}\n\n"
+            
+            # Get user's leaderboard position
+            try:
+                all_leaders = db_manager.get_all_time_leaderboard(100)
+                user_rank = None
+                for i, leader in enumerate(all_leaders, 1):
+                    if (leader.get('username', '').lower() == username.lower() or 
+                        leader.get('username', '').lower() == f'@{username}'.lower()):
+                        user_rank = i
+                        break
+                
+                if user_rank:
+                    message += f"**🏆 COMMUNITY RANKING:**\n"
+                    if user_rank <= 3:
+                        message += f"👑 **Rank**: #{user_rank} (PODIUM!) 🏆\n"
+                    elif user_rank <= 10:
+                        message += f"🥇 **Rank**: #{user_rank} (TOP 10!) 🌟\n"
+                    elif user_rank <= 25:
+                        message += f"🥈 **Rank**: #{user_rank} (TOP 25!) ⭐\n"
+                    else:
+                        message += f"📊 **Rank**: #{user_rank}\n"
+                else:
+                    message += f"**🏆 COMMUNITY RANKING:**\n"
+                    message += f"📊 **Status**: Unranked (keep trading!)\n"
+            except Exception as e:
+                logger.warning(f"Could not get leaderboard position: {e}")
+                message += f"**🏆 COMMUNITY RANKING:**\n"
+                message += f"📊 **Status**: Loading...\n"
+            
+            message += f"\n**🚀 QUICK ACTIONS:**\n"
+            message += f"📊 `/leaderboard` - See rankings\n"
+            message += f"📈 `/myhistory` - View trade history\n"
+            message += f"⚔️ `/profitbattle` - Start a battle\n"
+            message += f"🎯 `/achievements` - View badges"
+            
+            await self.safe_reply(update, message, parse_mode=ParseMode.MARKDOWN)
             await self.clean_command_message(update, context)
-            return
-        
-        message = message_formatter.format_user_stats_message(stats, username)
-        await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
-        await self.clean_command_message(update, context)
+            
+        except Exception as e:
+            logger.error(f"Error in mystats command: {e}")
+            await self.safe_reply(update, "❌ Error loading your stats. Please try again or contact support.")
     
     async def myhistory_command(self, update: Update, context) -> None:
         """Show personal trading history"""
@@ -1124,15 +1681,52 @@ Ready to dominate the markets? Start with `/submit` to log your first trade! �
         await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
     
     async def hall_of_fame_command(self, update: Update, context) -> None:
-        """Show all-time legends with special recognition"""
-        legends = db_manager.get_hall_of_fame()
-        
-        if not legends:
-            await update.message.reply_text("🏛️ Hall of Fame is still being built...")
-            return
-        
-        message = message_formatter.format_hall_of_fame_message(legends)
-        await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+        """Show all-time legends with special recognition across multiple categories"""
+        try:
+            # Get legends from database
+            legends = db_manager.get_hall_of_fame()
+            
+            if not legends:
+                no_legends_message = """
+🏛️ **HALL OF FAME** 🏛️
+
+*The legends are still being written...*
+
+🌟 **BECOME THE FIRST LEGEND:**
+📊 `/submit` - Add your trades and start your journey
+💰 `/profitbattle` - Prove your worth in battle
+⚔️ `/tradewar` - Show your trading dedication
+🎯 `/mystats` - Track your progress to greatness
+
+*Every legend starts with a single trade!*
+                """.strip()
+                await self.safe_reply(update, no_legends_message, parse_mode=ParseMode.MARKDOWN)
+                await self.clean_command_message(update, context)
+                return
+            
+            # Format the epic Hall of Fame message
+            message = message_formatter.format_hall_of_fame_message(legends)
+            
+            # Send the message
+            await self.safe_reply(update, message, parse_mode=ParseMode.MARKDOWN)
+            await self.clean_command_message(update, context)
+            
+        except Exception as e:
+            logger.error(f"Error in hall of fame command: {e}")
+            error_message = """
+🏛️ **HALL OF FAME** 🏛️
+
+⚠️ The Hall of Fame is temporarily under construction...
+
+🔧 **While we rebuild the legends:**
+📊 `/leaderboard` - See current champions
+💰 `/profitgoat` - Meet the profit king
+🏆 `/battleleaderboard` - Battle champions
+⚔️ `/mystats` - Your personal stats
+
+*The legends will return shortly!*
+            """.strip()
+            await self.safe_reply(update, error_message, parse_mode=ParseMode.MARKDOWN)
     
     # ===== MARKET INTELLIGENCE =====
     
@@ -1487,7 +2081,6 @@ Ready to track your trading journey? Start with a screenshot! 📸
             
             if not total_data:
                 await self.safe_reply(update, "📊 No trading data available yet.")
-                await self.clean_command_message(update, context)
                 return
             
             # Extract data
@@ -1507,40 +2100,38 @@ Ready to track your trading journey? Start with a screenshot! 📸
             current_sol_rate = f"${sol_usd_rate:.2f}" if sol_usd_rate else "N/A"
             current_sol_value = total_profit_sol * sol_usd_rate if sol_usd_rate else 0
             
-            # Format the comprehensive message
+            # Calculate key metrics for better presentation
+            avg_profit_per_trade = total_profit_usd / total_trades if total_trades > 0 else 0
+            avg_profit_per_trader = total_profit_usd / trader_count if trader_count > 0 else 0
+            sol_price_impact = ((current_sol_value - total_profit_usd) / total_profit_usd * 100) if total_profit_usd > 0 else 0
+            
+            # Determine performance indicators
+            roi_emoji = "🚀" if overall_roi > 50 else "📈" if overall_roi > 0 else "📉"
+            win_rate_emoji = "🎯" if win_rate >= 70 else "⚖️" if win_rate >= 50 else "📊"
+            
+            # Format the streamlined message
             message = f"""
-🌌 **LORE TOTAL PROFIT - COMMUNITY OVERVIEW** 🌌
+🏆 **LORE COMMUNITY PROFIT OVERVIEW** 🏆
 
-💰 **TOTAL COMBINED PROFIT:**
-💵 **${total_profit_usd:,.2f} USD** *(Actual profit at historical SOL rates)*
-◎ **{total_profit_sol:.3f} SOL** *(Total SOL earned)*
+💰 **TOTAL PROFIT: ${total_profit_usd:,.2f}**
+◎ **{total_profit_sol:.1f} SOL** | 🏅 **{overall_roi:+.1f}% ROI** {roi_emoji}
 
-📊 **PROFIT BREAKDOWN:**
-🔸 **Historical Value:** ${total_profit_usd:,.2f} *(Real profit when trades were made)*
-🔸 **Current SOL Rate:** {current_sol_rate} per SOL
-🔸 **Current Value:** ${current_sol_value:,.2f} *(If all SOL converted at today's rate)*
-🔸 **Rate Impact:** {'+' if current_sol_value > total_profit_usd else ''}${current_sol_value - total_profit_usd:,.2f} *(Difference due to SOL price changes)*
+📊 **COMMUNITY STATS:**
+👥 **{trader_count:,} Traders** | 🔄 **{total_trades:,} Trades**
+🪙 **{token_count:,} Tokens** | {win_rate_emoji} **{win_rate:.0f}% Win Rate**
 
-📊 **TRADING STATISTICS:**
-🔢 **Total Trades:** {total_trades:,}
-👥 **Active Traders:** {trader_count:,}
-🪙 **Tokens Traded:** {token_count:,}
-💸 **Total Investment:** ${total_investment:,.2f}
+💡 **KEY INSIGHTS:**
+• **Avg per Trade:** ${avg_profit_per_trade:,.0f}
+• **Avg per Trader:** ${avg_profit_per_trader:,.0f}  
+• **SOL Impact:** {'+' if sol_price_impact > 0 else ''}{sol_price_impact:.1f}%
 
-📈 **PERFORMANCE METRICS:**
-🎯 **Overall ROI:** {overall_roi:+.2f}%
-✅ **Win Rate:** {win_rate:.1f}%
-🟢 **Winning Trades:** {winning_trades:,}
-🔴 **Losing Trades:** {losing_trades:,}
+📈 **PERFORMANCE:**
+🟢 **{winning_trades:,} Wins** | 🔴 **{losing_trades:,} Losses**
+💸 **${total_investment:,.0f} Invested**
 
-📅 **Updated:** {message_formatter.format_date_uk_with_time(datetime.now(timezone.utc))}
+⚠️ **Note:** Community data only. Actual LORE profits estimated ~$165K+
 
-⚠️ **IMPORTANT DISCLAIMER:**
-This data represents **ONLY** profits that have been voluntarily submitted by users in the Telegram PNL channel. This is **NOT** reflective of total profit made by using LORE. Real estimates of total community profits are estimated to be around **$165,000** or higher.
-
-💡 **Note:** The "Historical Value" shows your actual profit based on SOL prices when each trade was made. The "Current Value" shows what those same SOL amounts would be worth at today's rate. The difference reflects SOL price movement over time.
-
-*This represents the combined profit/loss of every individual trade entry in our community database.*
+🕒 *Updated: {datetime.now(timezone.utc).strftime('%H:%M UTC')}*
             """
             
             await self.safe_reply(update, message.strip(), parse_mode=ParseMode.MARKDOWN)
@@ -1748,7 +2339,7 @@ Type `/profitbattle` or `/tradewar` to get started!
         username = update.effective_user.username or update.effective_user.first_name or f"User{user_id}"
         
         # Get user's battle stats
-        battle_stats = db_manager.get_user_battle_stats(user_id, username)
+        battle_stats = db_manager.get_user_battle_points(username)
         
         if not battle_stats:
             await update.message.reply_text(
@@ -1761,17 +2352,23 @@ Type `/profitbattle` or `/tradewar` to get started!
             return
         
         # Format battle stats
-        total_points = battle_stats.get('total_points', 0)
+        total_points = battle_stats.get('profit_battle_points', 0) + battle_stats.get('trade_war_points', 0)
         battles_won = battle_stats.get('battles_won', 0)
-        battles_participated = battle_stats.get('battles_participated', 0)
-        profit_battles_won = battle_stats.get('profit_battles_won', 0)
-        trade_wars_won = battle_stats.get('trade_wars_won', 0)
+        battles_participated = battle_stats.get('total_battles', 0)
+        profit_battles_won = battle_stats.get('profit_battles_won', 0)  # This field may not exist yet
+        trade_wars_won = battle_stats.get('trade_wars_won', 0)  # This field may not exist yet
         
         win_rate = (battles_won / battles_participated * 100) if battles_participated > 0 else 0
         
         # Determine rank based on points
-        rank_info = db_manager.get_user_battle_rank(user_id, username)
-        rank = rank_info.get('rank', 'Unranked')
+        leaderboard = db_manager.get_battle_leaderboard()
+        rank = 'Unranked'
+        total_points = battle_stats.get('profit_battle_points', 0) + battle_stats.get('trade_war_points', 0)
+        for i, user in enumerate(leaderboard, 1):
+            user_total = user.get('profit_battle_points', 0) + user.get('trade_war_points', 0)
+            if user.get('username') == username and user_total == total_points:
+                rank = i
+                break
         
         # Get recent battles
         recent_battles = battle_stats.get('recent_battles', [])
@@ -1830,9 +2427,9 @@ Type `/profitbattle` or `/tradewar` to get started!
             
             for i, user in enumerate(leaderboard[:10], 1):
                 username = user['username']
-                points = user['total_points']
-                battles_won = user['battles_won']
-                battles_total = user['battles_participated']
+                points = user.get('total_points', user.get('profit_battle_points', 0) + user.get('trade_war_points', 0))
+                battles_won = user.get('battles_won', 0)
+                battles_total = user.get('total_battles', 0)
                 
                 if i == 1:
                     emoji = "👑"
@@ -2780,6 +3377,8 @@ Type `/profitbattle` or `/tradewar` to get started!
         # Add handlers to application - ORDER MATTERS FOR MOBILE!
         self.application.add_handler(CommandHandler('start', self.start_command))
         self.application.add_handler(CommandHandler('help', self.help_command))
+        self.application.add_handler(CommandHandler('summary', self.summary_command))
+        self.application.add_handler(CommandHandler('testmode', self.testmode_command))
         
         # Photo auto-detection MUST be first (group=0) for mobile compatibility
         self.application.add_handler(MessageHandler(
