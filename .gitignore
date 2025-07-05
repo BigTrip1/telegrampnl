@@ -116,7 +116,7 @@ dmypy.json
 # MongoDB exports
 *.json.bak
 mongodb_export/
-database_backup/
+# database_backup/ - Allow for migration (contains 190 PNL records)
 
 # Logs
 *.log
